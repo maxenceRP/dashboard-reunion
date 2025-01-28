@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sun,
   Cloud,
@@ -12,21 +12,56 @@ import {
   CheckSquare,
   UserCircle,
 } from 'lucide-react';
+import { io } from "socket.io-client";
+
+const socket = io("http://10.0.0.113:3000"); // Remplacez par l'URL de votre serveur WebSocket.
 
 function App() {
   const [humeur, setHumeur] = useState('neutre');
   const [votes, setVotes] = useState({ pour: 0, contre: 0 });
   const [votesHistory, setVotesHistory] = useState<Array<{ name: string; vote: 'pour' | 'contre' }>>([]);
+  const [votedUsers, setVotedUsers] = useState<Set<string>>(new Set());
   const [meteoTickets, setMeteoTickets] = useState('ensoleillé');
   const [username, setUsername] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
 
+
   const handleVote = (type: 'pour' | 'contre') => {
     if (isAnonymous || !username) return;
     
+    // Vérifiez si l'utilisateur a déjà voté
+    if (votedUsers.has(username)) {
+      alert("Vous avez déjà voté !");
+      return;
+    }
+
+    // Enregistrez le vote
     setVotes(v => ({ ...v, [type]: v[type] + 1 }));
     setVotesHistory(prev => [...prev, { name: username, vote: type }]);
+
+    // Ajoutez l'utilisateur à la liste des votants
+    setVotedUsers(prev => new Set(prev).add(username));
+
+    // Envoyez la mise à jour au serveur
+    socket.emit("updateVotes", {
+      votes: { ...votes, [type]: votes[type] + 1 },
+      history: [...votesHistory, { name: username, vote: type }],
+    });
   };
+
+  useEffect(() => {
+    socket.on("updateVotes", (updatedVotes) => {
+      setVotes(updatedVotes);
+    });
+  
+    socket.on("updateVotesHistory", (updatedHistory) => {
+      setVotesHistory(updatedHistory);
+    });
+  
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const canVote = !isAnonymous && username.trim() !== '';
 
