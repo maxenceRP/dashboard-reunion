@@ -10,18 +10,64 @@ import {
   MessageCircle,
   Heart,
   CheckSquare,
+  UserCircle,
 } from 'lucide-react';
 
 function App() {
   const [humeur, setHumeur] = useState('neutre');
   const [votes, setVotes] = useState({ pour: 0, contre: 0 });
+  const [votesHistory, setVotesHistory] = useState<Array<{ name: string; vote: 'pour' | 'contre' }>>([]);
   const [meteoTickets, setMeteoTickets] = useState('ensoleillé');
+  const [username, setUsername] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(true);
+
+  const handleVote = (type: 'pour' | 'contre') => {
+    if (isAnonymous || !username) return;
+    
+    setVotes(v => ({ ...v, [type]: v[type] + 1 }));
+    setVotesHistory(prev => [...prev, { name: username, vote: type }]);
+  };
+
+  const canVote = !isAnonymous && username.trim() !== '';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* User Profile Section */}
+        <div className="absolute top-4 right-4 flex items-center gap-4 bg-white rounded-lg shadow-md p-3">
+          <UserCircle className="text-indigo-600 w-6 h-6" />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="anonymous"
+                checked={isAnonymous}
+                onChange={(e) => setIsAnonymous(e.target.checked)}
+                className="rounded text-indigo-600"
+              />
+              <label htmlFor="anonymous" className="text-sm text-gray-600">
+                Rester anonyme
+              </label>
+            </div>
+            {!isAnonymous && (
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Votre nom"
+                className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+            )}
+          </div>
+        </div>
+
         <h1 className="text-3xl font-bold text-indigo-900 mb-8 text-center">
           Dashboard Réunion d'Équipe
+          {!isAnonymous && username && (
+            <span className="text-lg font-normal text-indigo-600 ml-2">
+              - {username}
+            </span>
+          )}
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -65,21 +111,51 @@ function App() {
               <h2 className="text-xl font-semibold text-gray-800">Votes</h2>
               <Users className="text-indigo-600 w-6 h-6" />
             </div>
-            <div className="flex justify-around">
-              <button
-                onClick={() => setVotes(v => ({ ...v, pour: v.pour + 1 }))}
-                className="flex flex-col items-center"
-              >
-                <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
-                <span className="text-lg font-semibold">{votes.pour}</span>
-              </button>
-              <button
-                onClick={() => setVotes(v => ({ ...v, contre: v.contre + 1 }))}
-                className="flex flex-col items-center"
-              >
-                <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
-                <span className="text-lg font-semibold">{votes.contre}</span>
-              </button>
+            <div className="flex flex-col">
+              <div className="flex justify-around mb-4">
+                <button
+                  onClick={() => handleVote('pour')}
+                  className={`flex flex-col items-center transition-opacity ${!canVote ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canVote}
+                >
+                  <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
+                  <span className="text-lg font-semibold">{votes.pour}</span>
+                </button>
+                <button
+                  onClick={() => handleVote('contre')}
+                  className={`flex flex-col items-center transition-opacity ${!canVote ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canVote}
+                >
+                  <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
+                  <span className="text-lg font-semibold">{votes.contre}</span>
+                </button>
+              </div>
+              
+              {/* Vote History */}
+              {votesHistory.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Historique des votes</h3>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {votesHistory.map((vote, index) => (
+                      <div key={index} className="text-sm flex items-center gap-2">
+                        <span className="font-medium text-gray-800">{vote.name}</span>
+                        <span className="text-gray-500">a voté</span>
+                        {vote.vote === 'pour' ? (
+                          <ThumbsUp className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <ThumbsDown className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {!canVote && (
+                <p className="text-sm text-gray-500 text-center mt-2">
+                  Vous devez entrer votre nom pour voter
+                </p>
+              )}
             </div>
           </div>
 
