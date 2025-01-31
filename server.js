@@ -7,7 +7,7 @@ const io = new Server(3000, {
   },
 });
 
-io.listen(3000, "0.0.0.0");
+io.listen(3000);
 
 // Variables partagées entre les utilisateurs
 let votes = { pour: 0, contre: 0 };
