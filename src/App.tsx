@@ -18,6 +18,7 @@ import {
   Smartphone,
   Globe,
   Check,
+  Import,
 } from 'lucide-react';
 
 interface Mood {
@@ -47,38 +48,28 @@ function App() {
   
   const [ticketMetrics] = useState<TicketMetrics[]>([
     {
-      name: 'Web App',
+      name: 'EasyVista',
       icon: <Monitor className="w-5 h-5" />,
-      pendingTickets: 8,
+      pendingTickets: 0,
     },
     {
-      name: 'Mobile App',
+      name: 'mySoc',
       icon: <Smartphone className="w-5 h-5" />,
-      pendingTickets: 12,
+      pendingTickets: 0,
     },
     {
-      name: 'API',
+      name: 'myAccess',
       icon: <Globe className="w-5 h-5" />,
-      pendingTickets: 5,
-    },
+      pendingTickets: 0,
+    }
+
   ]);
 
   const [odjPoints, setOdjPoints] = useState<ListItem[]>([
-    { id: '1', text: 'Revue des objectifs Q1', completed: false, trigram: 'MRP' },
-    { id: '2', text: 'Planning des congés', completed: false, trigram: 'JSD' },
-    { id: '3', text: 'Nouveaux projets', completed: false, trigram: 'ALS' },
   ]);
   const [decisions, setDecisions] = useState<ListItem[]>([
-    { id: '1', text: 'Validation du planning', trigram: 'MRP' },
-    { id: '2', text: 'Attribution des tâches', trigram: 'JSD' },
   ]);
   const [news, setNews] = useState<ListItem[]>([
-    { id: '1', text: '🎉 Anniversaire de Marie jeudi prochain', type: 'team' },
-    { id: '2', text: '📅 Team Building prévu le 15 avril', type: 'team' },
-    { id: '3', text: '🎓 Formation React la semaine prochaine', type: 'team' },
-    { id: '4', text: '📢 Nouvelle politique de télétravail', type: 'hr' },
-    { id: '5', text: '💪 Nouveaux avantages CE', type: 'hr' },
-    { id: '6', text: '🎯 Entretiens annuels en avril', type: 'hr' },
   ]);
 
   const [newOdjPoint, setNewOdjPoint] = useState('');
@@ -185,6 +176,53 @@ function App() {
     setList(list.filter(item => item.id !== id));
   };
 
+  const [showInput, setShowInput] = useState(false);
+  const [text, setText] = useState("");
+
+  const handleButtonClick = () => {
+    setShowInput(true);
+  };
+
+  function parsePoints(text: string) {
+    // Split the text by new lines
+    const points = text.split("\n");
+    // Filter out any empty strings
+    const filteredPoints = points.filter(point => point.trim() !== "");
+    // Foreach point, trouver le trigramme et le contenu du point "ex: MRP : Faire le point sur le projet"
+    // Si le trigramme n'est pas trouvé, le point est ignoré
+    const parsedPoints = filteredPoints.map(point => {
+      const match = point.match(/([A-Z]{3})\s*:\s*(.*)/);
+      if (match) {
+        return { trigram: match[1], text: match[2] };
+      }
+      return null;
+    });
+    // Filter out any null values
+    const validPoints = parsedPoints.filter(point => point !== null);
+    return validPoints;
+  }
+
+  function addNewPoints(points: { trigram: string; text: string }[]) {
+    var id = Date.now();
+    points.forEach(point => {
+      setOdjPoints(prev => [...prev, {
+        id: (id++).toString(),
+        text: point.text,
+        trigram: point.trigram,
+        completed: false
+      }]);
+    });
+  }
+
+  const handleSubmit = () => {
+    const validPoints = parsePoints(text);
+    addNewPoints(validPoints);
+    setShowInput(false);
+    setText("");
+  };
+
+  
+
   const moodPercentages = calculateMoodPercentages();
   const canParticipate = !isAnonymous && username.trim() !== '';
   const hasVoted = username && votedUsers.has(username);
@@ -192,6 +230,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
+
         {/* User Profile Section */}
         <div className="absolute top-4 right-4 flex items-center gap-4 bg-white rounded-lg shadow-md p-3">
           <UserCircle className="text-indigo-600 w-6 h-6" />
@@ -229,217 +268,133 @@ function App() {
           )}
         </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Humeur du Jour with Percentages */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Humeur du Jour</h2>
-                <MessageCircle className="text-indigo-600 w-6 h-6" />
-              </div>
-              <div className="flex justify-around mb-4">
-                <button
-                  onClick={() => handleMoodChange('bonne')}
-                  className={`p-3 rounded-full ${
-                    !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                    humeur.find(m => m.user === username)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
-                  }`}
-                  disabled={!canParticipate}
-                >
-                  <Sun className="w-8 h-8" />
-                </button>
-                <button
-                  onClick={() => handleMoodChange('neutre')}
-                  className={`p-3 rounded-full ${
-                    !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                    humeur.find(m => m.user === username)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
-                  }`}
-                  disabled={!canParticipate}
-                >
-                  <Cloud className="w-8 h-8" />
-                </button>
-                <button
-                  onClick={() => handleMoodChange('mauvaise')}
-                  className={`p-3 rounded-full ${
-                    !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                    humeur.find(m => m.user === username)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
-                  }`}
-                  disabled={!canParticipate}
-                >
-                  <CloudRain className="w-8 h-8" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Sun className="w-4 h-4 text-green-500" />
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 rounded-full h-2"
-                      style={{ width: `${moodPercentages.bonne}%` }}
-                    />
-                  </div>
-                  <span className="text-sm text-gray-600">{Math.round(moodPercentages.bonne)}%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Cloud className="w-4 h-4 text-yellow-500" />
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-yellow-500 rounded-full h-2"
-                      style={{ width: `${moodPercentages.neutre}%` }}
-                    />
-                  </div>
-                  <span className="text-sm text-gray-600">{Math.round(moodPercentages.neutre)}%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CloudRain className="w-4 h-4 text-blue-500" />
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-500 rounded-full h-2"
-                      style={{ width: `${moodPercentages.mauvaise}%` }}
-                    />
-                  </div>
-                  <span className="text-sm text-gray-600">{Math.round(moodPercentages.mauvaise)}%</span>
-                </div>
-              </div>
+        {/* Main Grid */}
+        <div className="grid grid-cols-4 gap-2">
+          {/* Humeur du Jour with Percentages */}
+          <div className="bg-white p-4 text-center rounded-xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Humeur du Jour</h2>
+              <MessageCircle className="text-indigo-600 w-6 h-6" />
             </div>
-
-            {/* Système de Vote */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Votes</h2>
-                <Users className="text-indigo-600 w-6 h-6" />
-              </div>
-              <div className="flex flex-col">
-                <div className="flex justify-around mb-4">
-                  <button
-                    onClick={() => handleVote('pour')}
-                    className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={!canParticipate || hasVoted}
-                  >
-                    <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
-                    <span className="text-lg font-semibold">{votes.pour}</span>
-                  </button>
-                  <button
-                    onClick={() => handleVote('contre')}
-                    className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={!canParticipate || hasVoted}
-                  >
-                    <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
-                    <span className="text-lg font-semibold">{votes.contre}</span>
-                  </button>
-                </div>
-                
-                {hasVoted && (
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={resetVote}
-                      className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Réinitialiser mon vote
-                    </button>
-                  </div>
-                )}
-                
-                {!canParticipate && (
-                  <p className="text-sm text-gray-500 text-center mt-2">
-                    Vous devez entrer votre nom pour voter
-                  </p>
-                )}
-              </div>
+            <div className="flex justify-around mb-4">
+              <button
+                onClick={() => handleMoodChange('bonne')}
+                className={`p-3 rounded-full ${
+                  !canParticipate ? 'opacity-50 cursor-not-allowed' :
+                  humeur.find(m => m.user === username)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
+                }`}
+                disabled={!canParticipate}
+              >
+                <Sun className="w-8 h-8" />
+              </button>
+              <button
+                onClick={() => handleMoodChange('neutre')}
+                className={`p-3 rounded-full ${
+                  !canParticipate ? 'opacity-50 cursor-not-allowed' :
+                  humeur.find(m => m.user === username)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
+                }`}
+                disabled={!canParticipate}
+              >
+                <Cloud className="w-8 h-8" />
+              </button>
+              <button
+                onClick={() => handleMoodChange('mauvaise')}
+                className={`p-3 rounded-full ${
+                  !canParticipate ? 'opacity-50 cursor-not-allowed' :
+                  humeur.find(m => m.user === username)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
+                }`}
+                disabled={!canParticipate}
+              >
+                <CloudRain className="w-8 h-8" />
+              </button>
             </div>
-
-            {/* Météo des Tickets */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Tickets non résolus</h2>
-                <Calendar className="text-indigo-600 w-6 h-6" />
-              </div>
-              <div className="space-y-4">
-                {ticketMetrics.map((metric, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {metric.icon}
-                        <span className="font-medium text-gray-700">{metric.name}</span>
-                      </div>
-                      <span className="text-lg font-semibold text-indigo-600">
-                        {metric.pendingTickets}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* News Combined Section */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Actualités</h2>
-                <div className="flex items-center gap-2">
-                  <Users className="text-indigo-600 w-6 h-6" />
-                  <Heart className="text-indigo-600 w-6 h-6" />
-                </div>
-              </div>
-              <div className="space-y-3">
-                {news.map(item => (
-                  <div 
-                    key={item.id} 
-                    className={`p-3 ${
-                      item.type === 'team' 
-                        ? 'bg-emerald-100 text-emerald-900' 
-                        : 'bg-purple-100 text-purple-900'
-                    } rounded-lg flex items-center justify-between`}
-                  >
-                    <p className="font-medium">
-                      {item.text}
-                    </p>
-                    <button
-                      onClick={() => removeItem(item.id, news, setNews)}
-                      className={`${
-                        item.type === 'team' 
-                          ? 'text-emerald-700 hover:text-emerald-900' 
-                          : 'text-purple-700 hover:text-purple-900'
-                      } ml-2`}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-                <div className="flex gap-2 mt-2">
-                  <select
-                    value={newsType}
-                    onChange={(e) => setNewsType(e.target.value as 'team' | 'hr')}
-                    className="px-2 py-1 text-sm border rounded"
-                  >
-                    <option value="team">Équipe</option>
-                    <option value="hr">RH</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={newNews}
-                    onChange={(e) => setNewNews(e.target.value)}
-                    placeholder="Nouvelle actualité"
-                    className="flex-1 px-2 py-1 text-sm border rounded"
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Sun className="w-4 h-4 text-green-500" />
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-500 rounded-full h-2"
+                    style={{ width: `${moodPercentages.bonne}%` }}
                   />
-                  <button
-                    onClick={addNews}
-                    className="text-green-500 hover:text-green-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
                 </div>
+                <span className="text-sm text-gray-600">{Math.round(moodPercentages.bonne)}%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Cloud className="w-4 h-4 text-yellow-500" />
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-yellow-500 rounded-full h-2"
+                    style={{ width: `${moodPercentages.neutre}%` }}
+                  />
+                </div>
+                <span className="text-sm text-gray-600">{Math.round(moodPercentages.neutre)}%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CloudRain className="w-4 h-4 text-blue-500" />
+                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 rounded-full h-2"
+                    style={{ width: `${moodPercentages.mauvaise}%` }}
+                  />
+                </div>
+                <span className="text-sm text-gray-600">{Math.round(moodPercentages.mauvaise)}%</span>
               </div>
             </div>
           </div>
 
-          {/* ODJ & Décisions - Full Height */}
-          <div className="lg:row-span-2 bg-white rounded-xl shadow-lg p-6">
+          {/* Système de Vote */}
+          <div className="bg-white p-4 text-center rounded-xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Votes</h2>
+              <Users className="text-indigo-600 w-6 h-6" />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex justify-around mb-4">
+                <button
+                  onClick={() => handleVote('pour')}
+                  className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canParticipate || hasVoted}
+                >
+                  <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
+                  <span className="text-lg font-semibold">{votes.pour}</span>
+                </button>
+                <button
+                  onClick={() => handleVote('contre')}
+                  className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canParticipate || hasVoted}
+                >
+                  <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
+                  <span className="text-lg font-semibold">{votes.contre}</span>
+                </button>
+              </div>
+              
+              {hasVoted && (
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={resetVote}
+                    className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Réinitialiser mon vote
+                  </button>
+                </div>
+              )}
+              
+              {!canParticipate && (
+                <p className="text-sm text-gray-500 text-center mt-2">
+                  Vous devez entrer votre nom pour voter
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ODJ & Décisions */}
+          <div className="bg-white p-4 text-center col-span-2 row-span-2 rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-800">ODJ & Décisions</h2>
               <CheckSquare className="text-indigo-600 w-6 h-6" />
             </div>
-            <div className="space-y-6 h-full">
+            <div className="space-y-6">
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-4">Points à aborder</h3>
                 <div className="space-y-3">
@@ -484,7 +439,7 @@ function App() {
                       type="text"
                       value={newOdjTrigram}
                       onChange={(e) => setNewOdjTrigram(e.target.value)}
-                      placeholder="TRI"
+                      placeholder="NGE"
                       className="w-16 px-2 py-1 text-sm border rounded text-center uppercase"
                       maxLength={3}
                     />
@@ -530,7 +485,7 @@ function App() {
                       type="text"
                       value={newDecisionTrigram}
                       onChange={(e) => setNewDecisionTrigram(e.target.value)}
-                      placeholder="TRI"
+                      placeholder="MRP"
                       className="w-16 px-2 py-1 text-sm border rounded text-center uppercase"
                       maxLength={3}
                     />
@@ -542,6 +497,117 @@ function App() {
                     </button>
                   </div>
                 </div>
+              </div>
+              <div className="flex items-center justify-center">
+                {!showInput ? (
+                  <button
+                    onClick={handleButtonClick}
+                    className="bg-blue-500 text-white px-2 py-1 rounded-lg text-sm"
+                  >
+                    <div className="flex gap-1 items-center">
+                      <Import className="w-4 h-4" />
+                        Importer
+                    </div>
+                  </button>       
+                ) : (
+                  <div className="mt-2 items-center">
+                    <textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      className="border border-gray-300 rounded-md p-2 w-96 h-32"
+                      placeholder="Saisir les points à aborder"
+                    />
+                    <button
+                      onClick={handleSubmit}
+                      className="bg-green-500 text-white px-2 py-1 rounded-lg mt-2 text-sm"
+                    >
+                      Soumettre
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Météo des Tickets */}
+          <div className="bg-white p-4 text-center rounded-xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Tickets non résolus</h2>
+              <Calendar className="text-indigo-600 w-6 h-6" />
+            </div>
+            <div className="space-y-4">
+              {ticketMetrics.map((metric, index) => (
+                <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {metric.icon}
+                      <span className="font-medium text-gray-700">{metric.name}</span>
+                    </div>
+                    <span className="text-lg font-semibold text-indigo-600" contentEditable="true">
+                      {metric.pendingTickets}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* News Combined Section */}
+          <div className="bg-white p-4 text-center rounded-xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Actualités</h2>
+              <div className="flex items-center gap-2">
+                <Users className="text-indigo-600 w-6 h-6" />
+                <Heart className="text-indigo-600 w-6 h-6" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              {news.map(item => (
+                <div 
+                  key={item.id} 
+                  className={`p-3 ${
+                    item.type === 'team' 
+                      ? 'bg-emerald-100 text-emerald-900' 
+                      : 'bg-purple-100 text-purple-900'
+                  } rounded-lg flex items-center justify-between`}
+                >
+                  <p className="font-medium">
+                    {item.text}
+                  </p>
+                  <button
+                    onClick={() => removeItem(item.id, news, setNews)}
+                    className={`${
+                      item.type === 'team' 
+                        ? 'text-emerald-700 hover:text-emerald-900' 
+                        : 'text-purple-700 hover:text-purple-900'
+                    } ml-2`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              <div className="flex gap-2 mt-2">
+                <select
+                  value={newsType}
+                  onChange={(e) => setNewsType(e.target.value as 'team' | 'hr')}
+                  className="px-2 py-1 text-sm border rounded"
+                >
+                  <option value="team">Équipe</option>
+                  <option value="hr">RH</option>
+                </select>
+                <input
+                  type="text"
+                  value={newNews}
+                  onChange={(e) => setNewNews(e.target.value)}
+                  placeholder="Nouvelle actualité"
+                  className="flex-1 px-2 py-1 text-sm border rounded"
+                />
+                <button
+                  onClick={addNews}
+                  className="text-green-500 hover:text-green-700"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
