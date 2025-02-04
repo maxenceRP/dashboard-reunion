@@ -231,7 +231,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
 
-        {/* User Profile Section */}
+        {/* User Profile Section  */}
         <div className="absolute top-4 right-4 flex items-center gap-4 bg-white rounded-lg shadow-md p-3">
           <UserCircle className="text-indigo-600 w-6 h-6" />
           <div className="flex flex-col gap-2">
