@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sun,
   Cloud,
@@ -19,11 +19,13 @@ import {
   Globe,
   Check,
   Import,
+  UsersRound
 } from 'lucide-react';
+import { io } from "socket.io-client";
 
 interface Mood {
   user: string;
-  mood: 'bonne' | 'neutre' | 'mauvaise';
+  mood: 'bonne' | 'neutre' | 'mauvaise'
 }
 
 interface TicketMetrics {
@@ -39,12 +41,79 @@ interface ListItem {
   completed?: boolean;
 }
 
+interface User {
+  id: string;
+  name: string;
+  vote: string;
+  mood: string;
+}
+
+const socket = io('http://10.0.0.113:3000');
+
 function App() {
-  const [humeur, setHumeur] = useState<Mood[]>([]);
+  const [mood, setMood] = useState<Mood[]>([]);
   const [votes, setVotes] = useState({ pour: 0, contre: 0 });
   const [votedUsers, setVotedUsers] = useState<Set<string>>(new Set());
   const [username, setUsername] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
+  const [users, setUsers] = useState<Array<User>>([]);
+  const [showUserList, setShowUserList] = useState(false);
+
+
+  useEffect(() => {
+    socket.on("user-list", (users) => {
+      setUsers(users);
+    });
+
+    socket.on("user-connect", (userId) => {
+      setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "" }]);
+    });
+
+    socket.on("user-disconnect", (userId) => {
+      setUsers((prev) => prev.filter((user) => user.id !== userId));
+    });
+
+    socket.on("user-update-name", (userId, newName) => {
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === userId) {
+          return { ...user, name: newName };
+        }
+        return user;
+      }));
+      console.log("user-update-name", userId, newName);
+      console.log(users);
+    });
+
+    socket.on("user-update-mood", (userId, newMood) => {
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === userId) {
+          return { ...user, mood: newMood };
+        }
+        return user;
+      }));
+    });
+
+    socket.on("user-update-vote", (userId, vote) => {
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === userId) {
+          return { ...user, vote };
+        }
+        return user;
+      }));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (username) {
+      socket.emit("setUsername", username);
+    }
+  }, [username]);
+
+
   
   const [ticketMetrics] = useState<TicketMetrics[]>([
     {
@@ -100,27 +169,52 @@ function App() {
     });
   };
 
-  const handleMoodChange = (newMood: 'bonne' | 'neutre' | 'mauvaise') => {
-    if (isAnonymous || !username) return;
+  // const handleMoodChange = (newMood: 'bonne' | 'neutre' | 'mauvaise') => {
+  //   if (isAnonymous || !username) return;
     
-    setHumeur(prev => {
+  //   setHumeur(prev => {
+  //     const filtered = prev.filter(m => m.user !== username);
+  //     return [...filtered, { user: username, mood: newMood }];
+  //   });
+  // };
+
+  const changeMood = (newHumeur: 'bonne' | 'neutre' | 'mauvaise') => {
+    setMood( prev => {
       const filtered = prev.filter(m => m.user !== username);
-      return [...filtered, { user: username, mood: newMood }];
+      return [...filtered, { user: username, mood: newHumeur }];
     });
+    setUsers((prev) => prev.map((user) => {
+      if (user.id === socket.id) {
+        return { ...user, name: username, hasVoted: false, mood: newHumeur };
+      }
+      return user;
+    }));
+    socket.emit("updateHumeur", newHumeur);
   };
 
+  const changeUsername = (newUsername: string) => {
+    setUsername(newUsername);
+    setUsers((prev) => prev.map((user) => {
+      if (user.id === socket.id) {
+        return { ...user, name: newUsername };
+      }
+      return user;
+    }));
+    socket.emit("update-name", newUsername);
+  }
+
   const calculateMoodPercentages = () => {
-    if (humeur.length === 0) return { bonne: 0, neutre: 0, mauvaise: 0 };
+    if (mood.length === 0) return { bonne: 0, neutre: 0, mauvaise: 0 };
     
-    const counts = humeur.reduce((acc, curr) => {
+    const counts = mood.reduce((acc, curr) => {
       acc[curr.mood]++;
       return acc;
     }, { bonne: 0, neutre: 0, mauvaise: 0 });
 
     return {
-      bonne: (counts.bonne / humeur.length) * 100,
-      neutre: (counts.neutre / humeur.length) * 100,
-      mauvaise: (counts.mauvaise / humeur.length) * 100,
+      bonne: (counts.bonne / mood.length) * 100,
+      neutre: (counts.neutre / mood.length) * 100,
+      mauvaise: (counts.mauvaise / mood.length) * 100,
     };
   };
 
@@ -221,15 +315,71 @@ function App() {
     setText("");
   };
 
-  
-
   const moodPercentages = calculateMoodPercentages();
   const canParticipate = !isAnonymous && username.trim() !== '';
   const hasVoted = username && votedUsers.has(username);
 
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto">
+      {/* User List Button */}
+      <div className="absolute top-4 left-4">
+          <button
+            onClick={() => {setShowUserList(!showUserList); console.log(username);}}
+            className="bg-white p-3 rounded-lg shadow-md text-indigo-600 hover:text-indigo-800 transition-colors relative"
+          >
+            <UsersRound className="w-6 h-6" />
+          </button>
+          
+          {/* User List Popup */}
+          {showUserList && (
+            <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg p-4 z-50">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-800">Participants</h3>
+                <button
+                  onClick={() => setShowUserList(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {users.map((user, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 bg-gray-50 rounded"
+                  >
+                    {/* User Icon (vert si user.name = socketId sinon indigo) */}
+                    <UserCircle
+                      className={`w-6 h-6 ${user.id === socket.id ? 'text-green-500' : 'text-indigo-500'}`}
+                    />
+                    {/* user.name si different de "" sinon Anonyme */}
+                    <span className="font-medium">
+                      {user.name || "Anonyme"}
+                    </span>
+                    {user.vote && (
+                      <span className="ml-auto text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                        A voté
+                      </span>
+                    )}
+                    {user.mood != "" && (
+                      <span className="ml-auto text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        Humeur
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {users.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center">
+                    Aucun participant pour le moment
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      <div className="mx-auto">
 
         {/* User Profile Section  */}
         <div className="absolute top-4 right-4 flex items-center gap-4 bg-white rounded-lg shadow-md p-3">
@@ -251,7 +401,9 @@ function App() {
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  changeUsername(e.target.value);
+                }}
                 placeholder="Votre nom"
                 className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
               />
@@ -278,30 +430,32 @@ function App() {
             </div>
             <div className="flex justify-around mb-4">
               <button
-                onClick={() => handleMoodChange('bonne')}
+                onClick={() => changeMood('bonne')}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                  humeur.find(m => m.user === username)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
+                  mood.find(m => m.user === username)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
               >
                 <Sun className="w-8 h-8" />
               </button>
               <button
-                onClick={() => handleMoodChange('neutre')}
+                onClick={() => {
+                  changeMood('neutre');
+                }}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                  humeur.find(m => m.user === username)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
+                  mood.find(m => m.user === username)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
               >
                 <Cloud className="w-8 h-8" />
               </button>
               <button
-                onClick={() => handleMoodChange('mauvaise')}
+                onClick={() => changeMood('mauvaise')}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                  humeur.find(m => m.user === username)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
+                  mood.find(m => m.user === username)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
               >

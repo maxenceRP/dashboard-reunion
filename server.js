@@ -1,40 +1,61 @@
-import { Server } from "socket.io";
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { info } from 'console';
 
-// Créer le serveur WebSocket
-const io = new Server(3000, {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Permettre à tous les clients d'accéder au serveur
-  },
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
-io.listen(3000);
+// Serve static files from the dist directory
+app.use(express.static(join(__dirname, 'dist')));
 
-// Variables partagées entre les utilisateurs
-let votes = { pour: 0, contre: 0 };
-let votesHistory = [];
+class User {
+    constructor(id, name, vote, mood) {
+        this.id = id;
+        this.name = name;
+        this.vote = vote;
+        this.mood = mood;
+    }
+}
 
-// Gérer les connexions des utilisateurs
-io.on("connection", (socket) => {
-  console.log("Utilisateur connecté :", socket.id);
+const users = [];
 
-  // Envoyer l'état actuel au nouvel utilisateur
-  socket.emit("updateVotes", votes);
-  socket.emit("updateVotesHistory", votesHistory);
+io.on('connection', (socket) => {
+  console.log('User connected with id:', socket.id);
+  socket.emit('user-list', users);
+  users.push(new User(socket.id, '', '', ''));
+  io.emit('user-connect', socket.id);
 
-  // Écouter les mises à jour de votes
-  socket.on("updateVotes", (data) => {
-    votes = data.votes;
-    votesHistory = data.history;
-
-    // Diffuser les mises à jour à tous les utilisateurs connectés
-    io.emit("updateVotes", votes);
-    io.emit("updateVotesHistory", votesHistory);
+  socket.on('content-change', (content) => {
+    socket.broadcast.emit('content-update', content);
   });
 
-  // Gérer la déconnexion
-  socket.on("disconnect", () => {
-    console.log("Utilisateur déconnecté :", socket.id);
+  socket.on('update-name', (name) => {
+    console.log('User with id:', socket.id, 'changed name to:', name);
+    const user = users.find(user => user.id === socket.id);
+    user.name = name;
+    socket.broadcast.emit('user-update-name', { id: socket.id, name });
+  });
+
+  socket.on('disconnect', () => {
+    users.splice(users.findIndex(user => user.id === socket.id), 1);
+    io.emit('user-disconnect', socket.id);
+    console.log('User disconnected with id:', socket.id);
   });
 });
 
-console.log("Serveur WebSocket démarré sur le port 3000");
+const PORT = 3000;
+httpServer.listen(PORT, '10.0.0.113', () => {
+  console.log(`Server running on http://10.0.0.113:${PORT}`);
+});
