@@ -39,6 +39,7 @@ interface ListItem {
   text: string;
   trigram?: string;
   completed?: boolean;
+  newsType?: string;
 }
 
 interface User {
@@ -65,6 +66,19 @@ function App() {
       setUsers(users);
     });
 
+    socket.on("odj-list", (odjPoints) => {
+      setOdjPoints(odjPoints);
+      console.log("odj-list", odjPoints);
+    });
+
+    socket.on("decision-list", (decisions) => {
+      setDecisions(decisions);
+    });
+
+    socket.on("news-list", (news) => {
+      setNews(news);
+    });
+
     socket.on("user-connect", (userId) => {
       setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "" }]);
     });
@@ -84,22 +98,42 @@ function App() {
       console.log(users);
     });
 
-    socket.on("user-update-mood", (userId, newMood) => {
-      setUsers((prev) => prev.map((user) => {
-        if (user.id === userId) {
-          return { ...user, mood: newMood };
-        }
-        return user;
-      }));
+    socket.on("user-add-odj", (odjPoint) => {
+      setOdjPoints(prev => [...prev, {
+        id: odjPoint.id,
+        text: odjPoint.text,
+        trigram: odjPoint.trigram,
+        completed: odjPoint.completed
+      }]);
+      console.log("user-add-odj", odjPoint);
     });
 
-    socket.on("user-update-vote", (userId, vote) => {
-      setUsers((prev) => prev.map((user) => {
-        if (user.id === userId) {
-          return { ...user, vote };
-        }
-        return user;
-      }));
+    socket.on("user-remove-odj", (odjPointId) => {
+      setOdjPoints(prev => prev.filter(point => point.id !== odjPointId));
+    });
+
+    socket.on("user-add-decision", (decision) => {
+      setDecisions(prev => [...prev, {
+        id: decision.id,
+        text: decision.text,
+        trigram: decision.trigram
+      }]);
+    });
+
+    socket.on("user-remove-decision", (decisionId) => {
+      setDecisions(prev => prev.filter(decision => decision.id !== decisionId));
+    });
+
+    socket.on("user-add-news", (news) => {
+      setNews(prev => [...prev, {
+        id: news.id,
+        text: news.text,
+        newsType: news.newsType
+      }]);
+    });
+
+    socket.on("user-remove-news", (newsId) => {
+      setNews(prev => prev.filter(news => news.id !== newsId));
     });
 
     return () => {
@@ -148,11 +182,15 @@ function App() {
   const [newNews, setNewNews] = useState('');
   const [newsType, setNewsType] = useState<'team' | 'hr'>('team');
 
-  const handleVote = (type: 'pour' | 'contre') => {
-    if (isAnonymous || !username || votedUsers.has(username)) return;
-    
-    setVotes(v => ({ ...v, [type]: v[type] + 1 }));
-    setVotedUsers(prev => new Set(prev).add(username));
+  const changeVote = (type: 'pour' | 'contre') => {
+    if (isAnonymous) return;
+    users.map((user) => {
+      if (user.id === socket.id) {
+        if (!user?.name || user?.vote) return;
+        return { ...user, hasVoted: true };
+      }
+      return user;
+    });
   };
 
   const resetVote = () => {
@@ -228,46 +266,57 @@ function App() {
 
   const addOdjPoint = () => {
     if (newOdjPoint.trim() && newOdjTrigram.trim()) {
-      setOdjPoints(prev => [...prev, {
+      const odjPoint = {
         id: Date.now().toString(),
         text: newOdjPoint.trim(),
         trigram: newOdjTrigram.trim().toUpperCase(),
         completed: false
+      };
+      setOdjPoints(prev => [...prev, {
+        id: odjPoint.id,
+        text: odjPoint.text,
+        trigram: odjPoint.trigram,
+        completed: odjPoint.completed
       }]);
       setNewOdjPoint('');
       setNewOdjTrigram('');
+      socket.emit("add-odj", odjPoint);
     }
   };
 
   const addDecision = () => {
     if (newDecision.trim() && newDecisionTrigram.trim()) {
-      setDecisions(prev => [...prev, {
+      const decision = {
         id: Date.now().toString(),
         text: newDecision.trim(),
         trigram: newDecisionTrigram.trim().toUpperCase()
+      };
+      setDecisions(prev => [...prev, {
+        id: decision.id,
+        text: decision.text,
+        trigram: decision.trigram
       }]);
       setNewDecision('');
       setNewDecisionTrigram('');
+      socket.emit("add-decision", decision);
     }
   };
 
   const addNews = () => {
     if (newNews.trim()) {
-      setNews(prev => [...prev, {
+      const news = {
         id: Date.now().toString(),
         text: newNews.trim(),
-        type: newsType
+        newsType: newsType
+      };
+      setNews(prev => [...prev, {
+        id: news.id,
+        text: news.text,
+        newsType: news.newsType
       }]);
       setNewNews('');
+      socket.emit("add-news", news);
     }
-  };
-
-  const removeItem = (
-    id: string,
-    list: ListItem[],
-    setList: React.Dispatch<React.SetStateAction<ListItem[]>>
-  ) => {
-    setList(list.filter(item => item.id !== id));
   };
 
   const [showInput, setShowInput] = useState(false);
@@ -299,13 +348,35 @@ function App() {
   function addNewPoints(points: { trigram: string; text: string }[]) {
     var id = Date.now();
     points.forEach(point => {
-      setOdjPoints(prev => [...prev, {
+      const odjPoint = {
         id: (id++).toString(),
         text: point.text,
         trigram: point.trigram,
         completed: false
+      };
+      setOdjPoints(prev => [...prev, {
+        id: odjPoint.id,
+        text: odjPoint.text,
+        trigram: odjPoint.trigram,
+        completed: odjPoint.completed
       }]);
+      socket.emit("add-odj", odjPoint);
     });
+  }
+
+  function removeOdjPoint(id: string) {
+    setOdjPoints(prev => prev.filter(point => point.id !== id));
+    socket.emit("remove-odj", id);
+  }
+
+  function removeDecision(id: string) {
+    setDecisions(prev => prev.filter(decision => decision.id !== id));
+    socket.emit("remove-decision", id);
+  }
+
+  function removeNews(id: string) {
+    setNews(prev => prev.filter(news => news.id !== id));
+    socket.emit("remove-news", id);
   }
 
   const handleSubmit = () => {
@@ -505,7 +576,7 @@ function App() {
             <div className="flex flex-col">
               <div className="flex justify-around mb-4">
                 <button
-                  onClick={() => handleVote('pour')}
+                  onClick={() => changeVote('pour')}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!canParticipate || hasVoted}
                 >
@@ -513,7 +584,7 @@ function App() {
                   <span className="text-lg font-semibold">{votes.pour}</span>
                 </button>
                 <button
-                  onClick={() => handleVote('contre')}
+                  onClick={() => changeVote('contre')}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!canParticipate || hasVoted}
                 >
@@ -549,6 +620,7 @@ function App() {
               <CheckSquare className="text-indigo-600 w-6 h-6" />
             </div>
             <div className="space-y-6">
+              {/* ODJ */}
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-4">Points à aborder</h3>
                 <div className="space-y-3">
@@ -574,7 +646,7 @@ function App() {
                         )}
                       </div>
                       <button
-                        onClick={() => removeItem(point.id, odjPoints, setOdjPoints)}
+                        onClick={() => removeOdjPoint(point.id)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <X className="w-4 h-4" />
@@ -606,6 +678,7 @@ function App() {
                   </div>
                 </div>
               </div>
+              {/* Décisions */}
               <div className="p-3 bg-green-50 rounded-lg">
                 <h3 className="font-medium text-green-700 mb-4">Décisions prises</h3>
                 <div className="space-y-3">
@@ -620,7 +693,7 @@ function App() {
                         )}
                       </div>
                       <button
-                        onClick={() => removeItem(decision.id, decisions, setDecisions)}
+                        onClick={() => removeDecision(decision.id)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <X className="w-4 h-4" />
@@ -652,6 +725,7 @@ function App() {
                   </div>
                 </div>
               </div>
+              {/* Importer des points à aborder */}
               <div className="flex items-center justify-center">
                 {!showInput ? (
                   <button
@@ -720,7 +794,7 @@ function App() {
                 <div 
                   key={item.id} 
                   className={`p-3 ${
-                    item.type === 'team' 
+                    item.newsType === 'team' 
                       ? 'bg-emerald-100 text-emerald-900' 
                       : 'bg-purple-100 text-purple-900'
                   } rounded-lg flex items-center justify-between`}
@@ -729,9 +803,9 @@ function App() {
                     {item.text}
                   </p>
                   <button
-                    onClick={() => removeItem(item.id, news, setNews)}
+                    onClick={() => removeNews(item.id)}
                     className={`${
-                      item.type === 'team' 
+                      item.newsType === 'team' 
                         ? 'text-emerald-700 hover:text-emerald-900' 
                         : 'text-purple-700 hover:text-purple-900'
                     } ml-2`}

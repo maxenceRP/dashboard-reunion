@@ -29,11 +29,27 @@ class User {
     }
 }
 
+class ListItem {
+  constructor(id, text, trigram, completed, newsType) {
+    this.id = id;
+    this.text = text;
+    this.trigram = trigram;
+    this.completed = completed;
+    this.newsType = newsType;
+  }
+}
+
 const users = [];
+var odjList = []
+var decisionList = []
+var newsList = []
 
 io.on('connection', (socket) => {
-  console.log('User connected with id:', socket.id);
+  console.log('[CONNECT] User with id:', socket.id, 'connected');
   socket.emit('user-list', users);
+  socket.emit('odj-list', odjList);
+  socket.emit('decision-list', decisionList);
+  socket.emit('news-list', newsList);
   users.push(new User(socket.id, '', '', ''));
   io.emit('user-connect', socket.id);
 
@@ -42,16 +58,60 @@ io.on('connection', (socket) => {
   });
 
   socket.on('update-name', (name) => {
-    console.log('User with id:', socket.id, 'changed name to:', name);
+    console.log('[NAME] User with id:', socket.id, 'updated name to:', name);
     const user = users.find(user => user.id === socket.id);
     user.name = name;
     socket.broadcast.emit('user-update-name', { id: socket.id, name });
   });
 
+  socket.on('add-odj', (odj) => {
+    console.log('[ODJ] User with id:', socket.id, 'added odj with text:', odj.text);
+    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed));
+    socket.broadcast.emit('user-add-odj', odj);
+  });
+
+  socket.on('remove-odj', (id) => {
+    console.log('[ODJ] User with id:', socket.id, 'removed odj with id:', id);
+    odjList = odjList.filter(odj => odj.id !== id);
+    socket.broadcast.emit('user-remove-odj', id);
+  });
+
+  socket.on('add-decision', (decision) => {
+    console.log('[DECISION] User with id:', socket.id, 'added decision with text:', decision.text);
+    decisionList.push(new ListItem(decision.id, decision.text, decision.trigram));
+    socket.broadcast.emit('user-add-decision', decision);
+  });
+
+  socket.on('remove-decision', (id) => {
+    console.log('[DECISION] User with id:', socket.id, 'removed decision with id:', id);
+    decisionList = decisionList.filter(decision => decision.id !== id);
+    socket.broadcast.emit('user-remove-decision', id);
+  });
+  
+  socket.on('add-news', (news) => {
+    console.log('[NEWS] User with id:', socket.id, 'added news with text:', news.text, 'and type:', news.newsType);
+    newsList.push(new ListItem(news.id, news.text, news.newsType));
+    socket.broadcast.emit('user-add-news', news);
+  });
+
+  socket.on('remove-news', (id) => {
+    console.log('[NEWS] User with id:', socket.id, 'removed news with id:', id);
+    newsList = newsList.filter(newsItem => newsItem.id !== id);
+    socket.broadcast.emit('user-remove-news', id);
+  });
+
+  socket.on('update-vote', (vote) => {
+    console.log('[VOTE] User with id:', socket.id, 'updated vote to:', vote);
+    const user = users.find(user => user.id === socket.id);
+    user.vote = vote;
+    socket.broadcast.emit('user-update-vote', { id: socket.id, vote });
+  });
+    
+
   socket.on('disconnect', () => {
     users.splice(users.findIndex(user => user.id === socket.id), 1);
     io.emit('user-disconnect', socket.id);
-    console.log('User disconnected with id:', socket.id);
+    console.log('[DISCONNECT] User with id:', socket.id, 'disconnected');
   });
 });
 
