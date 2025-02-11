@@ -43,6 +43,7 @@ const users = [];
 var odjList = []
 var decisionList = []
 var newsList = []
+var ticketMetrics = [0,0,0]
 
 io.on('connection', (socket) => {
   console.log('[CONNECT] User with id:', socket.id, '(IP:', socket.handshake.address, ') connected');
@@ -50,6 +51,7 @@ io.on('connection', (socket) => {
   socket.emit('odj-list', odjList);
   socket.emit('decision-list', decisionList);
   socket.emit('news-list', newsList);
+  socket.emit('ticket-metrics', ticketMetrics);
   users.push(new User(socket.id, '', '', ''));
   io.emit('user-connect', socket.id);
 
@@ -114,6 +116,14 @@ io.on('connection', (socket) => {
     user.vote = '';
     socket.broadcast.emit('user-remove-vote', socket.id);
   });
+
+  // change metric value on index
+  socket.on('update-ticket-metric', (metric) => {
+    console.log('[METRIC] User with id:', socket.id, 'updated metric with value:', metric);
+    ticketMetrics[metric.index] = metric.value;
+    io.emit('user-update-ticket-metric', metric);
+  });
+
     
 
   socket.on('disconnect', () => {

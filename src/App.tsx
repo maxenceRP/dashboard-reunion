@@ -62,7 +62,6 @@ function App() {
   useEffect(() => {
     socket.on("user-list", (newUsers) => {
       setUsers(newUsers);
-      console.log("user-list", newUsers);
     });
 
     socket.on("odj-list", (odjPoints) => {
@@ -77,11 +76,16 @@ function App() {
       setNews(news);
     });
 
+    socket.on("ticket-metrics", (metrics) => {
+      setTicketMetrics((prev) => prev.map((metric, index) => {
+        return { ...metric, pendingTickets: metrics[index] };
+      }));
+    });
+
     socket.on("user-connect", (userId) => {
       console.log("user-connect", userId);
       console.log("users-before", users);
       setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "" }]);
-      console.log("users", users);
     });
 
     socket.on("user-disconnect", (userId) => {
@@ -95,7 +99,6 @@ function App() {
         }
         return user;
       }));
-      console.log("user-update-name", newUser.newName);
     });
 
     socket.on("user-add-odj", (odjPoint) => {
@@ -155,12 +158,21 @@ function App() {
       }));
     });
 
+    socket.on("user-update-ticket-metric", (metric) => {
+      setTicketMetrics(prev => prev.map((m, index) => {
+        if (index === metric.index) {
+          return { ...m, pendingTickets: metric.value };
+        }
+        return m;
+      }));
+    });
+
     return () => {
       socket.disconnect();
     };
   }, []);
   
-  const [ticketMetrics] = useState<TicketMetrics[]>([
+  const [ticketMetrics, setTicketMetrics] = useState<TicketMetrics[]>([
     {
       name: 'EasyVista',
       icon: <Monitor className="w-5 h-5" />,
@@ -176,7 +188,6 @@ function App() {
       icon: <Globe className="w-5 h-5" />,
       pendingTickets: 0,
     }
-
   ]);
 
   const [odjPoints, setOdjPoints] = useState<ListItem[]>([]);
@@ -244,6 +255,18 @@ function App() {
     }));
     socket.emit("update-name", newUsername);
   }
+
+  const changeTicketMetric = (index: number, value: string) => {
+    const newValue = parseInt(value, 10);
+    if (isNaN(newValue)) return;
+    setTicketMetrics(prev => prev.map((metric, i) => {
+      if (i === index) {
+        return { ...metric, pendingTickets: newValue };
+      }
+      return metric;
+    }));
+    socket.emit("update-ticket-metric", { 'index': index, 'value': newValue });
+  };
 
   const calculateMoodPercentages = () => {
     if (mood.length === 0) return { bonne: 0, neutre: 0, mauvaise: 0 };
@@ -774,9 +797,12 @@ function App() {
                       {metric.icon}
                       <span className="font-medium text-gray-700">{metric.name}</span>
                     </div>
-                    <span className="text-lg font-semibold text-indigo-600" contentEditable="true">
-                      {metric.pendingTickets}
-                    </span>
+                    <input
+                      type="number"
+                      value={metric.pendingTickets}
+                      onChange={(e) => changeTicketMetric(index, e.target.value)}
+                      className="w-16 px-2 py-1 text-sm border rounded text-center"
+                    />
                   </div>
                 </div>
               ))}
