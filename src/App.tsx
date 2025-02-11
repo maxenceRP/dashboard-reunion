@@ -53,22 +53,20 @@ const socket = io('http://10.0.0.113:3000');
 
 function App() {
   const [mood, setMood] = useState<Mood[]>([]);
-  const [votes, setVotes] = useState({ pour: 0, contre: 0 });
-  const [votedUsers, setVotedUsers] = useState<Set<string>>(new Set());
   const [username, setUsername] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
-  const [users, setUsers] = useState<Array<User>>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [showUserList, setShowUserList] = useState(false);
 
 
   useEffect(() => {
-    socket.on("user-list", (users) => {
-      setUsers(users);
+    socket.on("user-list", (newUsers) => {
+      setUsers(newUsers);
+      console.log("user-list", newUsers);
     });
 
     socket.on("odj-list", (odjPoints) => {
       setOdjPoints(odjPoints);
-      console.log("odj-list", odjPoints);
     });
 
     socket.on("decision-list", (decisions) => {
@@ -80,22 +78,24 @@ function App() {
     });
 
     socket.on("user-connect", (userId) => {
+      console.log("user-connect", userId);
+      console.log("users-before", users);
       setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "" }]);
+      console.log("users", users);
     });
 
     socket.on("user-disconnect", (userId) => {
       setUsers((prev) => prev.filter((user) => user.id !== userId));
     });
 
-    socket.on("user-update-name", (userId, newName) => {
+    socket.on("user-update-name", (newUser) => {
       setUsers((prev) => prev.map((user) => {
-        if (user.id === userId) {
-          return { ...user, name: newName };
+        if (user.id === newUser.id) {
+          return { ...user, name: newUser.name };
         }
         return user;
       }));
-      console.log("user-update-name", userId, newName);
-      console.log(users);
+      console.log("user-update-name", newUser.newName);
     });
 
     socket.on("user-add-odj", (odjPoint) => {
@@ -136,18 +136,29 @@ function App() {
       setNews(prev => prev.filter(news => news.id !== newsId));
     });
 
+    socket.on("user-add-vote", (userId, vote) => {
+      console.log("user-add-vote", userId, vote); 
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === userId) {
+          return { ...user, vote };
+        }
+        return user;
+      }));
+    });
+
+    socket.on("user-remove-vote", (userId) => {
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === userId) {
+          return { ...user, vote: "" };
+        }
+        return user;
+      }));
+    });
+
     return () => {
       socket.disconnect();
     };
   }, []);
-
-  useEffect(() => {
-    if (username) {
-      socket.emit("setUsername", username);
-    }
-  }, [username]);
-
-
   
   const [ticketMetrics] = useState<TicketMetrics[]>([
     {
@@ -168,12 +179,9 @@ function App() {
 
   ]);
 
-  const [odjPoints, setOdjPoints] = useState<ListItem[]>([
-  ]);
-  const [decisions, setDecisions] = useState<ListItem[]>([
-  ]);
-  const [news, setNews] = useState<ListItem[]>([
-  ]);
+  const [odjPoints, setOdjPoints] = useState<ListItem[]>([]);
+  const [decisions, setDecisions] = useState<ListItem[]>([]);
+  const [news, setNews] = useState<ListItem[]>([]);
 
   const [newOdjPoint, setNewOdjPoint] = useState('');
   const [newOdjTrigram, setNewOdjTrigram] = useState('');
@@ -184,27 +192,23 @@ function App() {
 
   const changeVote = (type: 'pour' | 'contre') => {
     if (isAnonymous) return;
-    users.map((user) => {
+    setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
-        if (!user?.name || user?.vote) return;
-        return { ...user, hasVoted: true };
+        return { ...user, vote: type};
       }
       return user;
-    });
+    }));
+    socket.emit("add-vote", type);
   };
 
   const resetVote = () => {
-    if (isAnonymous || !username || !votedUsers.has(username)) return;
-    
-    setVotes(v => ({
-      pour: votedUsers.has(username) && v.pour > 0 ? v.pour - 1 : v.pour,
-      contre: votedUsers.has(username) && v.contre > 0 ? v.contre - 1 : v.contre,
+    if (isAnonymous) return;
+    setUsers((prev) => prev.map((user) => {
+      if (user.id === socket.id) {
+        return { ...user, vote: "" };
+      }
+      return user;
     }));
-    setVotedUsers(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(username);
-      return newSet;
-    });
   };
 
   // const handleMoodChange = (newMood: 'bonne' | 'neutre' | 'mauvaise') => {
@@ -223,7 +227,7 @@ function App() {
     });
     setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
-        return { ...user, name: username, hasVoted: false, mood: newHumeur };
+        return { ...user, name: username, mood: newHumeur };
       }
       return user;
     }));
@@ -388,7 +392,6 @@ function App() {
 
   const moodPercentages = calculateMoodPercentages();
   const canParticipate = !isAnonymous && username.trim() !== '';
-  const hasVoted = username && votedUsers.has(username);
 
 
 
@@ -397,7 +400,7 @@ function App() {
       {/* User List Button */}
       <div className="absolute top-4 left-4">
           <button
-            onClick={() => {setShowUserList(!showUserList); console.log(username);}}
+            onClick={() => setShowUserList(!showUserList)}
             className="bg-white p-3 rounded-lg shadow-md text-indigo-600 hover:text-indigo-800 transition-colors relative"
           >
             <UsersRound className="w-6 h-6" />
@@ -577,23 +580,23 @@ function App() {
               <div className="flex justify-around mb-4">
                 <button
                   onClick={() => changeVote('pour')}
-                  className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canParticipate || hasVoted}
+                  className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote}
                 >
                   <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
-                  <span className="text-lg font-semibold">{votes.pour}</span>
+                  <span className="text-lg font-semibold">{users.filter(user => user.vote === 'pour').length}</span>
                 </button>
                 <button
                   onClick={() => changeVote('contre')}
-                  className={`flex flex-col items-center transition-opacity ${!canParticipate || hasVoted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canParticipate || hasVoted}
+                  className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote}
                 >
                   <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
-                  <span className="text-lg font-semibold">{votes.contre}</span>
+                  <span className="text-lg font-semibold">{users.filter(user => user.vote === 'contre').length}</span>
                 </button>
               </div>
               
-              {hasVoted && (
+              {users.find(user => user.id === socket.id)?.vote && (
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={resetVote}

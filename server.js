@@ -3,7 +3,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { info } from 'console';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,11 +20,12 @@ const io = new Server(httpServer, {
 app.use(express.static(join(__dirname, 'dist')));
 
 class User {
-    constructor(id, name, vote, mood) {
+    constructor(id, name, vote, mood, ip) {
         this.id = id;
         this.name = name;
         this.vote = vote;
         this.mood = mood;
+        this.ip = ip;
     }
 }
 
@@ -45,7 +45,7 @@ var decisionList = []
 var newsList = []
 
 io.on('connection', (socket) => {
-  console.log('[CONNECT] User with id:', socket.id, 'connected');
+  console.log('[CONNECT] User with id:', socket.id, '(IP:', socket.handshake.address, ') connected');
   socket.emit('user-list', users);
   socket.emit('odj-list', odjList);
   socket.emit('decision-list', decisionList);
@@ -53,14 +53,15 @@ io.on('connection', (socket) => {
   users.push(new User(socket.id, '', '', ''));
   io.emit('user-connect', socket.id);
 
-  socket.on('content-change', (content) => {
-    socket.broadcast.emit('content-update', content);
-  });
+  // socket.on('content-change', (content) => {
+  //   socket.broadcast.emit('content-update', content);
+  // });
 
   socket.on('update-name', (name) => {
     console.log('[NAME] User with id:', socket.id, 'updated name to:', name);
     const user = users.find(user => user.id === socket.id);
     user.name = name;
+    // console.log('users:', users);
     socket.broadcast.emit('user-update-name', { id: socket.id, name });
   });
 
@@ -100,11 +101,18 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user-remove-news', id);
   });
 
-  socket.on('update-vote', (vote) => {
-    console.log('[VOTE] User with id:', socket.id, 'updated vote to:', vote);
+  socket.on('add-vote', (vote) => {
+    console.log('[VOTE] User with id:', socket.id, 'added vote with text:', vote);
     const user = users.find(user => user.id === socket.id);
     user.vote = vote;
-    socket.broadcast.emit('user-update-vote', { id: socket.id, vote });
+    socket.broadcast.emit('user-add-vote', { id: socket.id, vote });
+  });
+
+  socket.on('remove-vote', () => {
+    console.log('[VOTE] User with id:', socket.id, 'removed vote');
+    const user = users.find(user => user.id === socket.id);
+    user.vote = '';
+    socket.broadcast.emit('user-remove-vote', socket.id);
   });
     
 
@@ -115,7 +123,8 @@ io.on('connection', (socket) => {
   });
 });
 
+const IP = "10.0.0.113"
 const PORT = 3000;
-httpServer.listen(PORT, '10.0.0.113', () => {
-  console.log(`Server running on http://10.0.0.113:${PORT}`);
+httpServer.listen(PORT, IP, () => {
+  console.log('[INFO]', `Server is running on http://${IP}:${PORT}`);
 });
