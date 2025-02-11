@@ -39,7 +39,7 @@ class ListItem {
   }
 }
 
-const users = [];
+var users = [];
 var odjList = []
 var decisionList = []
 var newsList = []
@@ -117,14 +117,18 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user-remove-vote', socket.id);
   });
 
-  // change metric value on index
+  socket.on('update-mood', (mood) => {
+    console.log('[MOOD] User with id:', socket.id, 'added mood with text:', mood);
+    const user = users.find(user => user.id === socket.id);
+    user.mood = mood;
+    socket.broadcast.emit('user-update-mood', { id: socket.id, value: mood });
+  });
+
   socket.on('update-ticket-metric', (metric) => {
     console.log('[METRIC] User with id:', socket.id, 'updated metric with value:', metric);
     ticketMetrics[metric.index] = metric.value;
     io.emit('user-update-ticket-metric', metric);
   });
-
-    
 
   socket.on('disconnect', () => {
     users.splice(users.findIndex(user => user.id === socket.id), 1);

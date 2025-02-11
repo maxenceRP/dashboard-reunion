@@ -52,7 +52,6 @@ interface User {
 const socket = io('http://10.0.0.113:3000');
 
 function App() {
-  const [mood, setMood] = useState<Mood[]>([]);
   const [username, setUsername] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -158,6 +157,15 @@ function App() {
       }));
     });
 
+    socket.on("user-update-mood", (mood) => {
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === mood.id) {
+          return { ...user, mood: mood.value };
+        }
+        return user;
+      }));
+    });
+
     socket.on("user-update-ticket-metric", (metric) => {
       setTicketMetrics(prev => prev.map((m, index) => {
         if (index === metric.index) {
@@ -231,18 +239,15 @@ function App() {
   //   });
   // };
 
-  const changeMood = (newHumeur: 'bonne' | 'neutre' | 'mauvaise') => {
-    setMood( prev => {
-      const filtered = prev.filter(m => m.user !== username);
-      return [...filtered, { user: username, mood: newHumeur }];
-    });
-    setUsers((prev) => prev.map((user) => {
+  const changeMood = (newMood: 'bonne' | 'neutre' | 'mauvaise') => {
+      setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
-        return { ...user, name: username, mood: newHumeur };
+        return { ...user, name: username, mood: newMood };
       }
       return user;
     }));
-    socket.emit("updateHumeur", newHumeur);
+    console.log("changeMood", newMood);
+    socket.emit("update-mood", newMood);
   };
 
   const changeUsername = (newUsername: string) => {
@@ -269,18 +274,28 @@ function App() {
   };
 
   const calculateMoodPercentages = () => {
-    if (mood.length === 0) return { bonne: 0, neutre: 0, mauvaise: 0 };
-    
-    const counts = mood.reduce((acc, curr) => {
-      acc[curr.mood]++;
+    const total = users.filter(user => user.mood !== "").length;
+    if (total === 0) {
+      return { bonne: 0, neutre: 0, mauvaise: 0 };
+    }
+    const moodCount = users.reduce((acc, user) => {
+      if (user.mood === 'bonne') {
+        acc.bonne++;
+      } else if (user.mood === 'neutre') {
+        acc.neutre++;
+      } else if (user.mood === 'mauvaise') {
+        acc.mauvaise++;
+      }
       return acc;
     }, { bonne: 0, neutre: 0, mauvaise: 0 });
-
-    return {
-      bonne: (counts.bonne / mood.length) * 100,
-      neutre: (counts.neutre / mood.length) * 100,
-      mauvaise: (counts.mauvaise / mood.length) * 100,
+    
+    const moodPercentages = {
+      bonne: (moodCount.bonne / total) * 100,
+      neutre: (moodCount.neutre / total) * 100,
+      mauvaise: (moodCount.mauvaise / total) * 100
     };
+    
+    return moodPercentages;
   };
 
   const toggleOdjPoint = (id: string) => {
@@ -413,7 +428,7 @@ function App() {
     setText("");
   };
 
-  const moodPercentages = calculateMoodPercentages();
+  var moodPercentages = calculateMoodPercentages();
   const canParticipate = !isAnonymous && username.trim() !== '';
 
 
@@ -530,7 +545,7 @@ function App() {
                 onClick={() => changeMood('bonne')}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                  mood.find(m => m.user === username)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
+                  users.find(user => user.id === socket.id)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
               >
@@ -542,7 +557,7 @@ function App() {
                 }}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                  mood.find(m => m.user === username)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
+                  users.find(user => user.id === socket.id)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
               >
@@ -552,7 +567,7 @@ function App() {
                 onClick={() => changeMood('mauvaise')}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
-                  mood.find(m => m.user === username)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
+                  users.find(user => user.id === socket.id)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
               >
