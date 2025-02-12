@@ -23,17 +23,20 @@ import {
 } from 'lucide-react';
 import { io } from "socket.io-client";
 
+// interface de l'humeur
 interface Mood {
   user: string;
   mood: 'bonne' | 'neutre' | 'mauvaise'
 }
 
+// interface des métriques des tickets
 interface TicketMetrics {
   name: string;
   icon: React.ReactNode;
   pendingTickets: number;
 }
 
+// interface de la liste des points à aborder, des décisions et des actualités
 interface ListItem {
   id: string;
   text: string;
@@ -42,6 +45,7 @@ interface ListItem {
   newsType?: string;
 }
 
+// interface de l'utilisateur
 interface User {
   id: string;
   name: string;
@@ -57,8 +61,39 @@ function App() {
   const [users, setUsers] = useState<User[]>([]);
   const [showUserList, setShowUserList] = useState(false);
 
+  const [ticketMetrics, setTicketMetrics] = useState<TicketMetrics[]>([
+    {
+      name: 'EasyVista',
+      icon: <Monitor className="w-5 h-5" />,
+      pendingTickets: 0,
+    },
+    {
+      name: 'mySoc',
+      icon: <Smartphone className="w-5 h-5" />,
+      pendingTickets: 0,
+    },
+    {
+      name: 'myAccess',
+      icon: <Globe className="w-5 h-5" />,
+      pendingTickets: 0,
+    }
+  ]);
+  const [odjPoints, setOdjPoints] = useState<ListItem[]>([]);
+  const [decisions, setDecisions] = useState<ListItem[]>([]);
+  const [news, setNews] = useState<ListItem[]>([]);
+
+  const [newOdjPoint, setNewOdjPoint] = useState('');
+  const [newOdjTrigram, setNewOdjTrigram] = useState('');
+  const [newDecision, setNewDecision] = useState('');
+  const [newDecisionTrigram, setNewDecisionTrigram] = useState('');
+  const [newNews, setNewNews] = useState('');
+  const [newsType, setNewsType] = useState<'team' | 'hr'>('team');
+
+  const [showInput, setShowInput] = useState(false);
+  const [text, setText] = useState("");
 
   useEffect(() => {
+    // Evenements d'initialisation
     socket.on("user-list", (newUsers) => {
       setUsers(newUsers);
     });
@@ -80,10 +115,9 @@ function App() {
         return { ...metric, pendingTickets: metrics[index] };
       }));
     });
-
+    
+    // Evenements de mise à jour en temps réel
     socket.on("user-connect", (userId) => {
-      console.log("user-connect", userId);
-      console.log("users-before", users);
       setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "" }]);
     });
 
@@ -107,7 +141,6 @@ function App() {
         trigram: odjPoint.trigram,
         completed: odjPoint.completed
       }]);
-      console.log("user-add-odj", odjPoint);
     });
 
     socket.on("user-remove-odj", (odjPointId) => {
@@ -138,11 +171,11 @@ function App() {
       setNews(prev => prev.filter(news => news.id !== newsId));
     });
 
-    socket.on("user-add-vote", (userId, vote) => {
-      console.log("user-add-vote", userId, vote); 
+    socket.on("user-add-vote", (newVote) => {
       setUsers((prev) => prev.map((user) => {
-        if (user.id === userId) {
-          return { ...user, vote };
+        if (user.id === newVote.id) {
+          console.log("user-add-vote", newVote.vote, user);
+          return { ...user, vote: newVote.vote };
         }
         return user;
       }));
@@ -151,6 +184,7 @@ function App() {
     socket.on("user-remove-vote", (userId) => {
       setUsers((prev) => prev.map((user) => {
         if (user.id === userId) {
+          console.log("user-remove-vote", user);
           return { ...user, vote: "" };
         }
         return user;
@@ -180,35 +214,8 @@ function App() {
     };
   }, []);
   
-  const [ticketMetrics, setTicketMetrics] = useState<TicketMetrics[]>([
-    {
-      name: 'EasyVista',
-      icon: <Monitor className="w-5 h-5" />,
-      pendingTickets: 0,
-    },
-    {
-      name: 'mySoc',
-      icon: <Smartphone className="w-5 h-5" />,
-      pendingTickets: 0,
-    },
-    {
-      name: 'myAccess',
-      icon: <Globe className="w-5 h-5" />,
-      pendingTickets: 0,
-    }
-  ]);
 
-  const [odjPoints, setOdjPoints] = useState<ListItem[]>([]);
-  const [decisions, setDecisions] = useState<ListItem[]>([]);
-  const [news, setNews] = useState<ListItem[]>([]);
-
-  const [newOdjPoint, setNewOdjPoint] = useState('');
-  const [newOdjTrigram, setNewOdjTrigram] = useState('');
-  const [newDecision, setNewDecision] = useState('');
-  const [newDecisionTrigram, setNewDecisionTrigram] = useState('');
-  const [newNews, setNewNews] = useState('');
-  const [newsType, setNewsType] = useState<'team' | 'hr'>('team');
-
+  // Fonctions de gestion des votes
   const changeVote = (type: 'pour' | 'contre') => {
     if (isAnonymous) return;
     setUsers((prev) => prev.map((user) => {
@@ -228,17 +235,11 @@ function App() {
       }
       return user;
     }));
+    socket.emit("remove-vote");
   };
 
-  // const handleMoodChange = (newMood: 'bonne' | 'neutre' | 'mauvaise') => {
-  //   if (isAnonymous || !username) return;
-    
-  //   setHumeur(prev => {
-  //     const filtered = prev.filter(m => m.user !== username);
-  //     return [...filtered, { user: username, mood: newMood }];
-  //   });
-  // };
 
+  // Fonctions de gestion des humeurs
   const changeMood = (newMood: 'bonne' | 'neutre' | 'mauvaise') => {
       setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
@@ -246,31 +247,7 @@ function App() {
       }
       return user;
     }));
-    console.log("changeMood", newMood);
     socket.emit("update-mood", newMood);
-  };
-
-  const changeUsername = (newUsername: string) => {
-    setUsername(newUsername);
-    setUsers((prev) => prev.map((user) => {
-      if (user.id === socket.id) {
-        return { ...user, name: newUsername };
-      }
-      return user;
-    }));
-    socket.emit("update-name", newUsername);
-  }
-
-  const changeTicketMetric = (index: number, value: string) => {
-    const newValue = parseInt(value, 10);
-    if (isNaN(newValue)) return;
-    setTicketMetrics(prev => prev.map((metric, i) => {
-      if (i === index) {
-        return { ...metric, pendingTickets: newValue };
-      }
-      return metric;
-    }));
-    socket.emit("update-ticket-metric", { 'index': index, 'value': newValue });
   };
 
   const calculateMoodPercentages = () => {
@@ -298,6 +275,35 @@ function App() {
     return moodPercentages;
   };
 
+
+  // Fonctions de gestion des noms
+  const changeUsername = (newUsername: string) => {
+    setUsername(newUsername);
+    setUsers((prev) => prev.map((user) => {
+      if (user.id === socket.id) {
+        return { ...user, name: newUsername };
+      }
+      return user;
+    }));
+    socket.emit("update-name", newUsername);
+  }
+
+
+  // Fonctions de gestion des tickets
+  const changeTicketMetric = (index: number, value: string) => {
+    const newValue = parseInt(value, 10);
+    if (isNaN(newValue)) return;
+    setTicketMetrics(prev => prev.map((metric, i) => {
+      if (i === index) {
+        return { ...metric, pendingTickets: newValue };
+      }
+      return metric;
+    }));
+    socket.emit("update-ticket-metric", { 'index': index, 'value': newValue });
+  };
+
+
+  // Fonctions de gestion de l'ODJ
   const toggleOdjPoint = (id: string) => {
     setOdjPoints(points =>
       points.map(point =>
@@ -326,44 +332,13 @@ function App() {
     }
   };
 
-  const addDecision = () => {
-    if (newDecision.trim() && newDecisionTrigram.trim()) {
-      const decision = {
-        id: Date.now().toString(),
-        text: newDecision.trim(),
-        trigram: newDecisionTrigram.trim().toUpperCase()
-      };
-      setDecisions(prev => [...prev, {
-        id: decision.id,
-        text: decision.text,
-        trigram: decision.trigram
-      }]);
-      setNewDecision('');
-      setNewDecisionTrigram('');
-      socket.emit("add-decision", decision);
-    }
-  };
+  function removeOdjPoint(id: string) {
+    setOdjPoints(prev => prev.filter(point => point.id !== id));
+    socket.emit("remove-odj", id);
+  }
 
-  const addNews = () => {
-    if (newNews.trim()) {
-      const news = {
-        id: Date.now().toString(),
-        text: newNews.trim(),
-        newsType: newsType
-      };
-      setNews(prev => [...prev, {
-        id: news.id,
-        text: news.text,
-        newsType: news.newsType
-      }]);
-      setNewNews('');
-      socket.emit("add-news", news);
-    }
-  };
 
-  const [showInput, setShowInput] = useState(false);
-  const [text, setText] = useState("");
-
+  // Fonctions de gestion de l'import de l'ODJ
   const handleButtonClick = () => {
     setShowInput(true);
   };
@@ -406,21 +381,6 @@ function App() {
     });
   }
 
-  function removeOdjPoint(id: string) {
-    setOdjPoints(prev => prev.filter(point => point.id !== id));
-    socket.emit("remove-odj", id);
-  }
-
-  function removeDecision(id: string) {
-    setDecisions(prev => prev.filter(decision => decision.id !== id));
-    socket.emit("remove-decision", id);
-  }
-
-  function removeNews(id: string) {
-    setNews(prev => prev.filter(news => news.id !== id));
-    socket.emit("remove-news", id);
-  }
-
   const handleSubmit = () => {
     const validPoints = parsePoints(text);
     addNewPoints(validPoints);
@@ -428,9 +388,58 @@ function App() {
     setText("");
   };
 
+
+  // Fonctions de gestion des décisions
+  const addDecision = () => {
+    if (newDecision.trim() && newDecisionTrigram.trim()) {
+      const decision = {
+        id: Date.now().toString(),
+        text: newDecision.trim(),
+        trigram: newDecisionTrigram.trim().toUpperCase()
+      };
+      setDecisions(prev => [...prev, {
+        id: decision.id,
+        text: decision.text,
+        trigram: decision.trigram
+      }]);
+      setNewDecision('');
+      setNewDecisionTrigram('');
+      socket.emit("add-decision", decision);
+    }
+  };
+
+  function removeDecision(id: string) {
+    setDecisions(prev => prev.filter(decision => decision.id !== id));
+    socket.emit("remove-decision", id);
+  }
+
+
+  // Fonctions de gestion des actualités
+  const addNews = () => {
+    if (newNews.trim()) {
+      const news = {
+        id: Date.now().toString(),
+        text: newNews.trim(),
+        newsType: newsType
+      };
+      setNews(prev => [...prev, {
+        id: news.id,
+        text: news.text,
+        newsType: news.newsType
+      }]);
+      setNewNews('');
+      socket.emit("add-news", news);
+    }
+  };
+
+  function removeNews(id: string) {
+    setNews(prev => prev.filter(news => news.id !== id));
+    socket.emit("remove-news", id);
+  }
+
+
   var moodPercentages = calculateMoodPercentages();
   const canParticipate = !isAnonymous && username.trim() !== '';
-
 
 
   return (
