@@ -934,15 +934,7 @@ function App() {
                   </button>
                 </div>
               ))}
-              <div className="flex gap-2 mt-2">
-                <select
-                  value={newsType}
-                  onChange={(e) => setNewsType(e.target.value as 'team' | 'hr')}
-                  className="px-2 py-1 text-sm border rounded"
-                >
-                  <option value="team">Équipe</option>
-                  <option value="hr">RH</option>
-                </select>
+              <div className="container flex align-items-center gap-2 mt-4">
                 <input
                   type="text"
                   value={newNews}
@@ -950,6 +942,14 @@ function App() {
                   placeholder="Nouvelle actualité"
                   className="flex-1 px-2 py-1 text-sm border rounded"
                 />
+                <select
+                  value={newsType}
+                  onChange={(e) => setNewsType(e.target.value as 'team' | 'hr')}
+                  className="px-2 py-1 text-sm border rounded"
+                >
+                  <option value="team">Equipe</option>
+                  <option value="hr">RH</option>
+                </select>
                 <button
                   onClick={addNews}
                   className="text-green-500 hover:text-green-700"

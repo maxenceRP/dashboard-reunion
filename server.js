@@ -2,12 +2,16 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import path, { dirname, join } from 'path';
 import 'dotenv/config';
+import fs from 'fs';
 
+// Variables pour les chemins
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const saving_folder = 'saves';
 
+// Création du serveur
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -42,10 +46,26 @@ class ListItem {
   }
 }
 
+// Fonction pour sauvegarder un objet dans un fichier
+function saveObjectToFile(obj, filename = 'data.json') {
+  fs.writeFileSync(filename, JSON.stringify(obj, null, 4), 'utf8');
+}
+
+// Fonction pour charger un objet depuis un fichier
+function loadObjectFromFile(filename) {
+  if (!fs.existsSync(filename)) {
+      console.log("Fichier non trouvé !");
+      return null;
+  }
+  const data = fs.readFileSync(filename, 'utf8');
+  return JSON.parse(data);
+}
+
 var users = [];
-var odjList = []
-var decisionList = []
-var newsList = []
+var odjList = loadObjectFromFile(path.join(saving_folder, 'odj.json')) || [];
+var decisionList = loadObjectFromFile(path.join(saving_folder, 'decision.json')) || [];
+var newsList = loadObjectFromFile(path.join(saving_folder, 'news.json')) || [];
+
 var ticketMetrics = [0,0,0]
 
 var testingIps = ["10.1.0.14"]
@@ -168,6 +188,13 @@ io.on('connection', (socket) => {
     users.splice(users.findIndex(user => user.id === socket.id), 1);
     io.emit('user-disconnect', socket.id);
     console.log('[DISCONNECT] User with id:', socket.id, 'disconnected');
+    if (users.length === 0) {
+      // Savegarde les news, décisions et ordre du jour
+      saveObjectToFile(newsList, path.join(saving_folder, 'news.json'));
+      saveObjectToFile(decisionList, path.join(saving_folder, 'decision.json'));
+      saveObjectToFile(odjList, path.join(saving_folder, 'odj.json'));
+      console.log('[SAVE] Saved news, decisions and odj');
+    }
   });
 });
 
