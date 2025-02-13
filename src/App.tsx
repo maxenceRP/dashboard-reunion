@@ -5,9 +5,10 @@ import {
   CloudRain,
   ThumbsUp,
   ThumbsDown,
-  Calendar,
+  Ticket,
   Users,
-  MessageCircle,
+  Vote,
+  MessageCircleHeart,
   Heart,
   CheckSquare,
   UserCircle,
@@ -19,7 +20,8 @@ import {
   Globe,
   Check,
   Import,
-  UsersRound
+  UsersRound,
+  EyeOff
 } from 'lucide-react';
 import { io } from "socket.io-client";
 
@@ -54,7 +56,6 @@ const socket = io(`http://${IP}:${PORT}`);
 
 function App() {
   const [error, setError] = useState('');
-  const [username, setUsername] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [showUserList, setShowUserList] = useState(false);
@@ -153,6 +154,15 @@ function App() {
       setOdjPoints(prev => prev.filter(point => point.id !== odjPointId));
     });
 
+    socket.on("user-toggle-odj", (odjPoint) => {
+      setOdjPoints(prev => prev.map(point => {
+        if (point.id === odjPoint.id) {
+          return { ...point, completed: odjPoint.completed };
+        }
+        return point;
+      }));
+    });
+
     socket.on("user-add-decision", (decision) => {
       setDecisions(prev => [...prev, {
         id: decision.id,
@@ -249,7 +259,7 @@ function App() {
   const changeMood = (newMood: 'bonne' | 'neutre' | 'mauvaise') => {
       setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
-        return { ...user, name: username, mood: newMood };
+        return { ...user, mood: newMood };
       }
       return user;
     }));
@@ -284,7 +294,6 @@ function App() {
 
   // Fonctions de gestion des noms
   const changeUsername = (newUsername: string) => {
-    setUsername(newUsername);
     setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
         return { ...user, name: newUsername };
@@ -292,6 +301,23 @@ function App() {
       return user;
     }));
     socket.emit("update-name", newUsername);
+  }
+  
+
+  const becomeAnonymous = (checked: boolean) => {
+    setIsAnonymous(checked);
+    // reset vote and mood if user becomes anonymous
+    if (checked) {
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === socket.id) {
+          return { ...user, name: "", vote: "", mood: "" };
+        }
+        return user;
+      }));
+      socket.emit("update-name", "");
+      socket.emit("remove-vote");
+      socket.emit("update-mood", "");
+    }
   }
 
 
@@ -316,6 +342,7 @@ function App() {
         point.id === id ? { ...point, completed: !point.completed } : point
       )
     );
+    socket.emit("toggle-odj", {id: id, completed: !odjPoints.find(point => point.id === id)?.completed});
   };
 
   const addOdjPoint = () => {
@@ -445,7 +472,7 @@ function App() {
 
 
   var moodPercentages = calculateMoodPercentages();
-  const canParticipate = !isAnonymous && username.trim() !== '';
+  const canParticipate = !isAnonymous && users.find(user => user.id === socket.id)?.name.trim() !== "";
 
   // Gestion des erreurs
   if (error) {
@@ -459,10 +486,12 @@ function App() {
     );
   }
 
+  // Dashboard principal
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      {/* User List Button */}
-      <div className="absolute top-4 left-4">
+      <div className="mx-auto">
+        {/* Popup de la liste des utilisateurs */}
+        <div className="absolute top-4 left-4">
           <button
             onClick={() => setShowUserList(!showUserList)}
             className="bg-white p-3 rounded-lg shadow-md text-indigo-600 hover:text-indigo-800 transition-colors relative"
@@ -488,10 +517,11 @@ function App() {
                     key={index}
                     className="flex items-center gap-2 p-2 bg-gray-50 rounded"
                   >
-                    {/* User Icon (vert si user.name = socketId sinon indigo) */}
-                    <UserCircle
-                      className={`w-6 h-6 ${user.id === socket.id ? 'text-green-500' : 'text-indigo-500'}`}
-                    />
+                    {user.name ? (
+                      <UserCircle className={`w-6 h-6 ${user.id === socket.id ? 'text-green-500' : 'text-indigo-500'}`} />
+                    ) : (
+                      <EyeOff className={`w-6 h-6 ${user.id === socket.id ? 'text-green-500' : 'text-indigo-500'}`} />
+                    )}
                     {/* user.name si different de "" sinon Anonyme */}
                     <span className="font-medium">
                       {user.name || "Anonyme"}
@@ -517,9 +547,8 @@ function App() {
             </div>
           )}
         </div>
-      <div className="mx-auto">
 
-        {/* User Profile Section  */}
+        {/* Profil utilisateur */}
         <div className="absolute top-4 right-4 flex items-center gap-4 bg-white rounded-lg shadow-md p-3">
           <UserCircle className="text-indigo-600 w-6 h-6" />
           <div className="flex flex-col gap-2">
@@ -528,7 +557,7 @@ function App() {
                 type="checkbox"
                 id="anonymous"
                 checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
+                onChange={(e) => becomeAnonymous(e.target.checked)}
                 className="rounded text-indigo-600"
               />
               <label htmlFor="anonymous" className="text-sm text-gray-600">
@@ -538,7 +567,7 @@ function App() {
             {!isAnonymous && (
               <input
                 type="text"
-                value={username}
+                value={users.find(user => user.id === socket.id)?.name}
                 onChange={(e) => {
                   changeUsername(e.target.value);
                 }}
@@ -549,22 +578,23 @@ function App() {
           </div>
         </div>
 
+        {/* Titre du Dashboard */}
         <h1 className="text-3xl font-bold text-indigo-900 mb-8 text-center">
           Dashboard Réunion d'Équipe
-          {!isAnonymous && username && (
+          {!isAnonymous && users.find(user => user.id === socket.id)?.name && (
             <span className="text-lg font-normal text-indigo-600 ml-2">
-              - {username}
+              - {users.find(user => user.id === socket.id)?.name}
             </span>
           )}
         </h1>
 
-        {/* Main Grid */}
+        {/* Section des Widgets */}
         <div className="grid grid-cols-4 gap-2">
           {/* Humeur du Jour with Percentages */}
           <div className="bg-white p-4 text-center rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Humeur du Jour</h2>
-              <MessageCircle className="text-indigo-600 w-6 h-6" />
+              <MessageCircleHeart className="text-indigo-600 w-6 h-6" />
             </div>
             <div className="flex justify-around mb-4">
               <button
@@ -638,7 +668,7 @@ function App() {
           <div className="bg-white p-4 text-center rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Votes</h2>
-              <Users className="text-indigo-600 w-6 h-6" />
+              <Vote className="text-indigo-600 w-6 h-6" />
             </div>
             <div className="flex flex-col">
               <div className="flex justify-around mb-4">
@@ -677,9 +707,29 @@ function App() {
                   Vous devez entrer votre nom pour voter
                 </p>
               )}
+
+              {canParticipate && (
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-green-600">Pour</h3>
+                    <ul className="text-xs text-gray-500">
+                      {users.filter(user => user.vote === 'pour').map((user, index) => (
+                        <li key={index}>{user.name || "Anonyme"}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-red-600">Contre</h3>
+                    <ul className="text-xs text-gray-500">
+                      {users.filter(user => user.vote === 'contre').map((user, index) => (
+                        <li key={index}>{user.name || "Anonyme"}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
           {/* ODJ & Décisions */}
           <div className="bg-white p-4 text-center col-span-2 row-span-2 rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
@@ -828,7 +878,7 @@ function App() {
           <div className="bg-white p-4 text-center rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Tickets non résolus</h2>
-              <Calendar className="text-indigo-600 w-6 h-6" />
+              <Ticket className="text-indigo-600 w-6 h-6" />
             </div>
             <div className="space-y-4">
               {ticketMetrics.map((metric, index) => (
@@ -850,7 +900,7 @@ function App() {
             </div>
           </div>
 
-          {/* News Combined Section */}
+          {/* Actualités */}
           <div className="bg-white p-4 text-center rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Actualités</h2>

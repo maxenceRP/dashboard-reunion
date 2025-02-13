@@ -155,6 +155,14 @@ io.on('connection', (socket) => {
     io.emit('user-update-ticket-metric', metric);
   });
 
+  // Changer le statut de la coche d'un item de liste
+  socket.on('toggle-odj', (coche) => {
+    console.log('[ODJ] User with id:', socket.id, 'toggled odj with id:', coche.id);
+    const odj = odjList.find(odj => odj.id === coche.id);
+    odj.completed = coche.completed;
+    socket.broadcast.emit('user-toggle-odj', coche);
+  });
+
   // Déconnexion d'un utilisateur
   socket.on('disconnect', () => {
     users.splice(users.findIndex(user => user.id === socket.id), 1);
