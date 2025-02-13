@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import 'dotenv/config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -47,16 +48,30 @@ var decisionList = []
 var newsList = []
 var ticketMetrics = [0,0,0]
 
+var testingIps = ["10.1.0.14"]
+
 io.on('connection', (socket) => {
   // Connexion d'un utilisateur
   console.log('[CONNECT] User with id:', socket.id, '(IP:', socket.handshake.address, ') connected');
+
+  // Vérification de la présence de l'utilisateur (même IP)
+  if (users.find(user => user.ip === socket.handshake.address)) {
+    // Si l'IP est une IP de test, on accepte la connexion
+    if (!testingIps.includes(socket.handshake.address)) {  
+      console.log('[ERROR] User with IP:', socket.handshake.address, 'is already connected, socket id:', socket.id);
+      socket.emit('user-already-connected', 'Cette adresse IP est déjà connectée');
+      socket.disconnect(true);
+      return;
+    }
+  }
+
   // Envoi des données actuelles à l'utilisateur
   socket.emit('user-list', users);
   socket.emit('odj-list', odjList);
   socket.emit('decision-list', decisionList);
   socket.emit('news-list', newsList);
   socket.emit('ticket-metrics', ticketMetrics);
-  users.push(new User(socket.id, '', '', ''));
+  users.push(new User(socket.id, '', '', '', socket.handshake.address));
   io.emit('user-connect', socket.id);
 
   // Mise à jour du nom de l'utilisateur
@@ -148,8 +163,8 @@ io.on('connection', (socket) => {
   });
 });
 
-const IP = "10.0.0.113"
-const PORT = 3000;
+const IP = process.env.HOST;
+const PORT = Number(process.env.SOCKET_PORT) || 3000;
 httpServer.listen(PORT, IP, () => {
   console.log('[INFO]', `Server is running on http://${IP}:${PORT}`);
 });

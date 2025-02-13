@@ -23,12 +23,6 @@ import {
 } from 'lucide-react';
 import { io } from "socket.io-client";
 
-// interface de l'humeur
-interface Mood {
-  user: string;
-  mood: 'bonne' | 'neutre' | 'mauvaise'
-}
-
 // interface des métriques des tickets
 interface TicketMetrics {
   name: string;
@@ -53,9 +47,13 @@ interface User {
   mood: string;
 }
 
-const socket = io('http://10.0.0.113:3000');
+var IP = '10.0.0.113';
+var PORT = '3000';
+const socket = io(`http://${IP}:${PORT}`);
+
 
 function App() {
+  const [error, setError] = useState('');
   const [username, setUsername] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -119,6 +117,14 @@ function App() {
     // Evenements de mise à jour en temps réel
     socket.on("user-connect", (userId) => {
       setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "" }]);
+    });
+
+    socket.on('user-already-connected', (message: string) => {
+      setError(message);
+    });
+
+    socket.on("connect_error", () => {
+      setError("Erreur de connexion au serveur");
     });
 
     socket.on("user-disconnect", (userId) => {
@@ -441,6 +447,17 @@ function App() {
   var moodPercentages = calculateMoodPercentages();
   const canParticipate = !isAnonymous && username.trim() !== '';
 
+  // Gestion des erreurs
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+        <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Erreur de connexion</h1>
+          <p className="text-gray-700">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
@@ -628,7 +645,7 @@ function App() {
                 <button
                   onClick={() => changeVote('pour')}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote}
+                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
                 >
                   <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
                   <span className="text-lg font-semibold">{users.filter(user => user.vote === 'pour').length}</span>
@@ -636,7 +653,7 @@ function App() {
                 <button
                   onClick={() => changeVote('contre')}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote}
+                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
                 >
                   <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
                   <span className="text-lg font-semibold">{users.filter(user => user.vote === 'contre').length}</span>
