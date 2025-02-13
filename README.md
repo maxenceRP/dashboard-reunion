@@ -8,6 +8,7 @@ Ce projet est une application **React + TypeScript** avec un serveur backend **N
 ├── dist/                 # Dossier de build
 ├── node_modules/         # Dépendances npm
 ├── public/               # Fichiers statiques
+├── saves/                # Fichiers de sauvergarde
 ├── src/                  # Code source du frontend
 │   ├── App.tsx
 │   ├── main.tsx
