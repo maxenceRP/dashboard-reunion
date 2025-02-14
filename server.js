@@ -63,12 +63,11 @@ function loadObjectFromFile(filename) {
 
 var users = [];
 var odjList = loadObjectFromFile(path.join(saving_folder, 'odj.json')) || [];
-var decisionList = loadObjectFromFile(path.join(saving_folder, 'decision.json')) || [];
+var decisionList = loadObjectFromFile(path.join(saving_folder, 'decisions.json')) || [];
 var newsList = loadObjectFromFile(path.join(saving_folder, 'news.json')) || [];
+var ticketMetrics = loadObjectFromFile(path.join(saving_folder, 'metrics.json')) || [0, 0, 0];
 
-var ticketMetrics = [0,0,0]
-
-var testingIps = ["10.1.0.14"]
+var testingIps = ["10.251.198.16", "10.1.0.14"]
 
 io.on('connection', (socket) => {
   // Connexion d'un utilisateur
@@ -191,8 +190,9 @@ io.on('connection', (socket) => {
     if (users.length === 0) {
       // Savegarde les news, décisions et ordre du jour
       saveObjectToFile(newsList, path.join(saving_folder, 'news.json'));
-      saveObjectToFile(decisionList, path.join(saving_folder, 'decision.json'));
+      saveObjectToFile(decisionList, path.join(saving_folder, 'decisions.json'));
       saveObjectToFile(odjList, path.join(saving_folder, 'odj.json'));
+      saveObjectToFile(ticketMetrics, path.join(saving_folder, 'metrics.json'));
       console.log('[SAVE] Saved news, decisions and odj');
     }
   });
