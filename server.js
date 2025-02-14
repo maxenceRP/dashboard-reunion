@@ -37,12 +37,13 @@ class User {
 
 // Classe représentant un item de liste
 class ListItem {
-  constructor(id, text, trigram, completed, newsType) {
+  constructor(id, text, trigram, completed, newsType, owner) {
     this.id = id;
     this.text = text;
     this.trigram = trigram;
     this.completed = completed;
     this.newsType = newsType;
+    this.owner = owner;
   }
 }
 
@@ -104,7 +105,7 @@ io.on('connection', (socket) => {
   // Ajout d'un item à l'ordre du jour
   socket.on('add-odj', (odj) => {
     console.log('[ODJ] User with id:', socket.id, 'added odj with text:', odj.text);
-    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed));
+    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed, odj.owner));
     socket.broadcast.emit('user-add-odj', odj);
   });
 
@@ -118,7 +119,7 @@ io.on('connection', (socket) => {
   // Ajout d'une décision à prendre
   socket.on('add-decision', (decision) => {
     console.log('[DECISION] User with id:', socket.id, 'added decision with text:', decision.text);
-    decisionList.push(new ListItem(decision.id, decision.text, decision.trigram));
+    decisionList.push(new ListItem(decision.id, decision.text, decision.trigram, decision.owner));
     socket.broadcast.emit('user-add-decision', decision);
   });
 
@@ -193,7 +194,7 @@ io.on('connection', (socket) => {
       saveObjectToFile(decisionList, path.join(saving_folder, 'decisions.json'));
       saveObjectToFile(odjList, path.join(saving_folder, 'odj.json'));
       saveObjectToFile(ticketMetrics, path.join(saving_folder, 'metrics.json'));
-      console.log('[SAVE] Saved news, decisions and odj');
+      console.log('[SAVE] Saved news, decisions, odj and metrics');
     }
   });
 });

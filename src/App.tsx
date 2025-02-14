@@ -39,6 +39,7 @@ interface ListItem {
   trigram?: string;
   completed?: boolean;
   newsType?: string;
+  owner?: string;
 }
 
 // interface de l'utilisateur
@@ -49,7 +50,7 @@ interface User {
   mood: string;
 }
 
-var IP = '10.0.0.113';
+var IP = '10.251.198.66';
 var PORT = '3000';
 const socket = io(`http://${IP}:${PORT}`);
 
@@ -146,7 +147,8 @@ function App() {
         id: odjPoint.id,
         text: odjPoint.text,
         trigram: odjPoint.trigram,
-        completed: odjPoint.completed
+        completed: odjPoint.completed,
+        owner: odjPoint.owner
       }]);
     });
 
@@ -167,7 +169,8 @@ function App() {
       setDecisions(prev => [...prev, {
         id: decision.id,
         text: decision.text,
-        trigram: decision.trigram
+        trigram: decision.trigram,
+        owner: decision.owner
       }]);
     });
 
@@ -294,6 +297,9 @@ function App() {
 
   // Fonctions de gestion des noms
   const changeUsername = (newUsername: string) => {
+    if (users.find(user => user.name === newUsername)) {
+      return;
+    }
     setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
         return { ...user, name: newUsername };
@@ -323,8 +329,8 @@ function App() {
 
   // Fonctions de gestion des tickets
   const changeTicketMetric = (index: number, value: string) => {
-    const newValue = parseInt(value, 10);
-    if (isNaN(newValue)) return;
+    const newValue = parseInt(value, 10) || 0;
+    if (isNaN(newValue) || newValue >= 100 || newValue < 0) return;
     setTicketMetrics(prev => prev.map((metric, i) => {
       if (i === index) {
         return { ...metric, pendingTickets: newValue };
@@ -351,13 +357,15 @@ function App() {
         id: Date.now().toString(),
         text: newOdjPoint.trim(),
         trigram: newOdjTrigram.trim().toUpperCase(),
-        completed: false
+        completed: false,
+        owner: socket.id
       };
       setOdjPoints(prev => [...prev, {
         id: odjPoint.id,
         text: odjPoint.text,
         trigram: odjPoint.trigram,
-        completed: odjPoint.completed
+        completed: odjPoint.completed,
+        owner: odjPoint.owner
       }]);
       setNewOdjPoint('');
       setNewOdjTrigram('');
@@ -370,6 +378,11 @@ function App() {
     socket.emit("remove-odj", id);
   }
 
+  const getTitle = (ownerId: string) => {
+    const userTitle = ownerId == socket.id ? "vous" : users.find(user => user.id === ownerId)?.name;
+    return `Proposé par ${userTitle || "un anonyme"}`;
+  }
+
 
   // Fonctions de gestion de l'import de l'ODJ
   const handleButtonClick = () => {
@@ -377,12 +390,8 @@ function App() {
   };
 
   function parsePoints(text: string) {
-    // Split the text by new lines
     const points = text.split("\n");
-    // Filter out any empty strings
     const filteredPoints = points.filter(point => point.trim() !== "");
-    // Foreach point, trouver le trigramme et le contenu du point "ex: MRP : Faire le point sur le projet"
-    // Si le trigramme n'est pas trouvé, le point est ignoré
     const parsedPoints = filteredPoints.map(point => {
       const match = point.match(/([A-Z]{3})\s*:\s*(.*)/);
       if (match) {
@@ -402,13 +411,15 @@ function App() {
         id: (id++).toString(),
         text: point.text,
         trigram: point.trigram,
-        completed: false
+        completed: false,
+        owner: socket.id
       };
       setOdjPoints(prev => [...prev, {
         id: odjPoint.id,
         text: odjPoint.text,
         trigram: odjPoint.trigram,
-        completed: odjPoint.completed
+        completed: odjPoint.completed,
+        owner: odjPoint.owner
       }]);
       socket.emit("add-odj", odjPoint);
     });
@@ -428,12 +439,14 @@ function App() {
       const decision = {
         id: Date.now().toString(),
         text: newDecision.trim(),
-        trigram: newDecisionTrigram.trim().toUpperCase()
+        trigram: newDecisionTrigram.trim().toUpperCase(),
+        owner: socket.id
       };
       setDecisions(prev => [...prev, {
         id: decision.id,
         text: decision.text,
-        trigram: decision.trigram
+        trigram: decision.trigram,
+        owner: decision.owner
       }]);
       setNewDecision('');
       setNewDecisionTrigram('');
@@ -453,12 +466,14 @@ function App() {
       const news = {
         id: Date.now().toString(),
         text: newNews.trim(),
-        newsType: newsType
+        newsType: newsType,
+        owner: socket.id
       };
       setNews(prev => [...prev, {
         id: news.id,
         text: news.text,
-        newsType: news.newsType
+        newsType: news.newsType,
+        owner: news.owner
       }]);
       setNewNews('');
       socket.emit("add-news", news);
@@ -473,6 +488,7 @@ function App() {
 
   var moodPercentages = calculateMoodPercentages();
   const canParticipate = !isAnonymous && users.find(user => user.id === socket.id)?.name.trim() !== "";
+  const AnonymeTitle = "Entrez votre nom pour voter";
 
   // Gestion des erreurs
   if (error) {
@@ -604,6 +620,7 @@ function App() {
                   users.find(user => user.id === socket.id)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
+                title={canParticipate ? "Bonne humeur" : AnonymeTitle}
               >
                 <Sun className="w-8 h-8" />
               </button>
@@ -616,6 +633,7 @@ function App() {
                   users.find(user => user.id === socket.id)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
                 }`}
                 disabled={!canParticipate}
+                title={canParticipate ? "Humeur neutre" : AnonymeTitle}
               >
                 <Cloud className="w-8 h-8" />
               </button>
@@ -625,7 +643,7 @@ function App() {
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
                   users.find(user => user.id === socket.id)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
                 }`}
-                disabled={!canParticipate}
+                disabled={!canParticipate} title={canParticipate ? "Mauvaise humeur" : AnonymeTitle}
               >
                 <CloudRain className="w-8 h-8" />
               </button>
@@ -676,6 +694,7 @@ function App() {
                   onClick={() => changeVote('pour')}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
+                  title={canParticipate ? "Voter pour" : AnonymeTitle}
                 >
                   <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
                   <span className="text-lg font-semibold">{users.filter(user => user.vote === 'pour').length}</span>
@@ -684,6 +703,7 @@ function App() {
                   onClick={() => changeVote('contre')}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
+                  title={canParticipate ? "Voter contre" : AnonymeTitle}
                 >
                   <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
                   <span className="text-lg font-semibold">{users.filter(user => user.vote === 'contre').length}</span>
@@ -753,7 +773,10 @@ function App() {
                         >
                           {point.completed && <Check className="w-4 h-4" />}
                         </button>
-                        <span className={`text-gray-600 flex-1 ${point.completed ? 'line-through' : ''}`}>
+                        <span
+                          className={`text-gray-600 flex-1 ${point.completed ? 'line-through' : ''}`}
+                          title={getTitle(point.owner || "")}
+                        >
                           {point.text}
                         </span>
                         {point.trigram && (
@@ -802,7 +825,10 @@ function App() {
                   {decisions.map(decision => (
                     <div key={decision.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-1">
-                        <span className="text-green-600">{decision.text}</span>
+                        <span
+                          className="text-green-600"
+                          title={getTitle(decision.owner || "")}
+                        >{decision.text}</span>
                         {decision.trigram && (
                           <span className="px-2 py-1 text-xs font-medium bg-green-200 text-green-800 rounded">
                             {decision.trigram}
