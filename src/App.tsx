@@ -6,6 +6,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Ticket,
+  TicketCheck,
   Users,
   Vote,
   MessageCircleHeart,
@@ -15,9 +16,8 @@ import {
   Plus,
   X,
   RotateCcw,
-  Monitor,
-  Smartphone,
-  Globe,
+  KeyRound,
+  ShieldAlert,
   Check,
   Import,
   UsersRound,
@@ -30,6 +30,8 @@ interface TicketMetrics {
   name: string;
   icon: React.ReactNode;
   pendingTickets: number;
+  redThreshold: number;
+  yellowThreshold: number;
 }
 
 // interface de la liste des points à aborder, des décisions et des actualités
@@ -64,18 +66,24 @@ function App() {
   const [ticketMetrics, setTicketMetrics] = useState<TicketMetrics[]>([
     {
       name: 'EasyVista',
-      icon: <Monitor className="w-5 h-5" />,
+      icon: <TicketCheck className="w-5 h-5" />,
       pendingTickets: 0,
+      redThreshold: 10,
+      yellowThreshold: 5
     },
     {
       name: 'mySoc',
-      icon: <Smartphone className="w-5 h-5" />,
+      icon: <ShieldAlert className="w-5 h-5" />,
       pendingTickets: 0,
+      redThreshold: 5,
+      yellowThreshold: 3
     },
     {
       name: 'myAccess',
-      icon: <Globe className="w-5 h-5" />,
+      icon: <KeyRound className="w-5 h-5" />,
       pendingTickets: 0,
+      redThreshold: 10,
+      yellowThreshold: 5
     }
   ]);
   const [odjPoints, setOdjPoints] = useState<ListItem[]>([]);
@@ -88,6 +96,7 @@ function App() {
   const [newDecisionTrigram, setNewDecisionTrigram] = useState('');
   const [newNews, setNewNews] = useState('');
   const [newsType, setNewsType] = useState<'team' | 'hr'>('team');
+  const [PointTitle, setTitle] = useState('');
 
   const [showInput, setShowInput] = useState(false);
   const [text, setText] = useState("");
@@ -193,7 +202,6 @@ function App() {
     socket.on("user-add-vote", (newVote) => {
       setUsers((prev) => prev.map((user) => {
         if (user.id === newVote.id) {
-          console.log("user-add-vote", newVote.vote, user);
           return { ...user, vote: newVote.vote };
         }
         return user;
@@ -203,7 +211,6 @@ function App() {
     socket.on("user-remove-vote", (userId) => {
       setUsers((prev) => prev.map((user) => {
         if (user.id === userId) {
-          console.log("user-remove-vote", user);
           return { ...user, vote: "" };
         }
         return user;
@@ -297,7 +304,8 @@ function App() {
 
   // Fonctions de gestion des noms
   const changeUsername = (newUsername: string) => {
-    if (users.find(user => user.name === newUsername)) {
+    newUsername = newUsername.trim();
+    if (users.find(user => user.name === newUsername || newUsername === "")) {
       return;
     }
     setUsers((prev) => prev.map((user) => {
@@ -378,9 +386,9 @@ function App() {
     socket.emit("remove-odj", id);
   }
 
-  const getTitle = (ownerId: string) => {
+  const changeTitle = (ownerId: string) => {
     const userTitle = ownerId == socket.id ? "vous" : users.find(user => user.id === ownerId)?.name;
-    return `Proposé par ${userTitle || "un anonyme"}`;
+    setTitle(`Proposé par ${userTitle || "un anonyme"}`);
   }
 
 
@@ -750,6 +758,7 @@ function App() {
               )}
             </div>
           </div>
+
           {/* ODJ & Décisions */}
           <div className="bg-white p-4 text-center col-span-2 row-span-2 rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
@@ -775,7 +784,8 @@ function App() {
                         </button>
                         <span
                           className={`text-gray-600 flex-1 ${point.completed ? 'line-through' : ''}`}
-                          title={getTitle(point.owner || "")}
+                          onMouseOverCapture={() => changeTitle(point.owner || "")}
+                          title={PointTitle}
                         >
                           {point.text}
                         </span>
@@ -827,7 +837,8 @@ function App() {
                       <div className="flex items-center gap-2 flex-1">
                         <span
                           className="text-green-600"
-                          title={getTitle(decision.owner || "")}
+                          onMouseOverCapture={() => changeTitle(decision.owner || "")}
+                          title={PointTitle}
                         >{decision.text}</span>
                         {decision.trigram && (
                           <span className="px-2 py-1 text-xs font-medium bg-green-200 text-green-800 rounded">
@@ -912,7 +923,9 @@ function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {metric.icon}
-                      <span className="font-medium text-gray-700">{metric.name}</span>
+                      <span className={`text-${metric.pendingTickets >= metric.redThreshold ? 'red' : metric.pendingTickets >= metric.yellowThreshold ? 'yellow' : 'green'}-600`}>
+                        {metric.name}
+                      </span>
                     </div>
                     <input
                       type="number"

@@ -68,7 +68,7 @@ var decisionList = loadObjectFromFile(path.join(saving_folder, 'decisions.json')
 var newsList = loadObjectFromFile(path.join(saving_folder, 'news.json')) || [];
 var ticketMetrics = loadObjectFromFile(path.join(saving_folder, 'metrics.json')) || [0, 0, 0];
 
-var testingIps = ["10.251.198.16", "10.1.0.14"]
+var testingIps = ["10.251.198.13", "10.1.0.14"]
 
 io.on('connection', (socket) => {
   // Connexion d'un utilisateur
@@ -105,7 +105,7 @@ io.on('connection', (socket) => {
   // Ajout d'un item à l'ordre du jour
   socket.on('add-odj', (odj) => {
     console.log('[ODJ] User with id:', socket.id, 'added odj with text:', odj.text);
-    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed, odj.owner));
+    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed, '', odj.owner));
     socket.broadcast.emit('user-add-odj', odj);
   });
 
