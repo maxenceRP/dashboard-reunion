@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import copy from 'copy-to-clipboard';
+import { Bounce, Flip, ToastContainer, toast } from 'react-toastify';
 import {
   Sun,
   Cloud,
@@ -101,6 +102,11 @@ function App() {
 
   const [showInput, setShowInput] = useState(false);
   const [text, setText] = useState("");
+
+  // Toast Notifications
+  const successToast = (message: string) => toast.success(message, { transition: Flip, position: 'bottom-center' });
+  const errorToast = (message: string) => toast.error(message);
+  const infoToast = (message: string) => toast.info(message, { transition: Flip, position: 'top-center' });
 
   useEffect(() => {
     // Evenements d'initialisation
@@ -244,7 +250,10 @@ function App() {
 
   // Fonctions de gestion des votes
   const changeVote = (type: 'pour' | 'contre') => {
-    if (isAnonymous) return;
+    if (isAnonymous) {
+      errorToast("Vous devez entrer votre nom pour voter");
+      return;
+    }
     setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
         return { ...user, vote: type};
@@ -255,7 +264,10 @@ function App() {
   };
 
   const resetVote = () => {
-    if (isAnonymous) return;
+    if (isAnonymous) {
+      errorToast("Vous devez entrer votre nom pour voter");
+      return;
+    }
     setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
         return { ...user, vote: "" };
@@ -263,6 +275,7 @@ function App() {
       return user;
     }));
     socket.emit("remove-vote");
+    infoToast("Votre vote a été réinitialisé");
   };
 
 
@@ -307,6 +320,7 @@ function App() {
   const changeUsername = (newUsername: string) => {
     newUsername = newUsername.trim();
     if (users.find(user => user.name === newUsername) && newUsername !== "") {
+      errorToast("Ce nom est déjà utilisé par un autre participant");
       return;
     }
     setUsers((prev) => prev.map((user) => {
@@ -332,6 +346,7 @@ function App() {
       socket.emit("update-name", "");
       socket.emit("remove-vote");
       socket.emit("update-mood", "");
+      infoToast("Vous êtes maintenant anonyme. Votre vote et votre humeur ont été réinitialisés");
     }
   }
 
@@ -339,7 +354,10 @@ function App() {
   // Fonctions de gestion des tickets
   const changeTicketMetric = (index: number, value: string) => {
     const newValue = parseInt(value, 10) || 0;
-    if (isNaN(newValue) || newValue >= 100 || newValue < 0) return;
+    if (isNaN(newValue) || newValue >= 100 || newValue < 0) {
+      errorToast(`La valeur ${value} n'est pas valide`);
+      return;
+    }
     setTicketMetrics(prev => prev.map((metric, i) => {
       if (i === index) {
         return { ...metric, pendingTickets: newValue };
@@ -361,25 +379,31 @@ function App() {
   };
 
   const addOdjPoint = () => {
-    if (newOdjPoint.trim() && newOdjTrigram.trim()) {
-      const odjPoint = {
-        id: Date.now().toString(),
-        text: newOdjPoint.trim(),
-        trigram: newOdjTrigram.trim().toUpperCase(),
-        completed: false,
-        owner: socket.id
-      };
-      setOdjPoints(prev => [...prev, {
-        id: odjPoint.id,
-        text: odjPoint.text,
-        trigram: odjPoint.trigram,
-        completed: odjPoint.completed,
-        owner: odjPoint.owner
-      }]);
-      setNewOdjPoint('');
-      setNewOdjTrigram('');
-      socket.emit("add-odj", odjPoint);
+    if (!newOdjPoint.trim()) {
+      errorToast("Veuillez entrer un point à aborder");
+      return;
     }
+    if (!newOdjTrigram.trim()) {
+      errorToast("Veuillez entrer un trigramme");
+      return;
+    }
+    const odjPoint = {
+      id: Date.now().toString(),
+      text: newOdjPoint.trim(),
+      trigram: newOdjTrigram.trim().toUpperCase(),
+      completed: false,
+      owner: socket.id
+    };
+    setOdjPoints(prev => [...prev, {
+      id: odjPoint.id,
+      text: odjPoint.text,
+      trigram: odjPoint.trigram,
+      completed: odjPoint.completed,
+      owner: odjPoint.owner
+    }]);
+    setNewOdjPoint('');
+    setNewOdjTrigram('');
+    socket.emit("add-odj", odjPoint);
   };
 
   function removeOdjPoint(id: string) {
@@ -404,6 +428,10 @@ function App() {
   };
 
   function parsePoints(text: string) {
+    if (!text) {
+      errorToast("Veuillez entrer des points à aborder");
+      return [];
+    }
     const points = text.split("\n");
     const filteredPoints = points.filter(point => point.trim() !== "");
     const parsedPoints = filteredPoints.map(point => {
@@ -440,8 +468,14 @@ function App() {
   }
 
   const handleSubmit = () => {
-    const validPoints = parsePoints(text);
-    addNewPoints(validPoints);
+    if (!text) {
+      errorToast("Veuillez entrer des points à aborder");
+
+    }
+    else {
+      const validPoints = parsePoints(text);
+      addNewPoints(validPoints);
+    }
     setShowInput(false);
     setText("");
   };
@@ -450,10 +484,10 @@ function App() {
   const CopyToClipboard = (text: string) => {
     try {
       copy(text);
-      alert("Le texte a été copié dans le presse-papier");
+      successToast("Texte copié dans le presse-papier");
     } catch (err) {
       alert("Impossible de copier le texte dans le presse-papier");
-      console.error(err);
+      errorToast("Impossible de copier le texte dans le presse-papier");
     }
   }
 
@@ -485,23 +519,29 @@ function App() {
 
   // Fonctions de gestion des décisions
   const addDecision = () => {
-    if (newDecision.trim() && newDecisionTrigram.trim()) {
-      const decision = {
-        id: Date.now().toString(),
-        text: newDecision.trim(),
-        trigram: newDecisionTrigram.trim().toUpperCase(),
-        owner: socket.id
-      };
-      setDecisions(prev => [...prev, {
-        id: decision.id,
-        text: decision.text,
-        trigram: decision.trigram,
-        owner: decision.owner
-      }]);
-      setNewDecision('');
-      setNewDecisionTrigram('');
-      socket.emit("add-decision", decision);
+    if (!newDecision.trim()) {
+      errorToast("Veuillez entrer une décision");
+      return;
     }
+    if (!newDecisionTrigram.trim()) {
+      errorToast("Veuillez entrer un trigramme");
+      return;
+    }
+    const decision = {
+      id: Date.now().toString(),
+      text: newDecision.trim(),
+      trigram: newDecisionTrigram.trim().toUpperCase(),
+      owner: socket.id
+    };
+    setDecisions(prev => [...prev, {
+      id: decision.id,
+      text: decision.text,
+      trigram: decision.trigram,
+      owner: decision.owner
+    }]);
+    setNewDecision('');
+    setNewDecisionTrigram('');
+    socket.emit("add-decision", decision);
   };
 
   function removeDecision(id: string) {
@@ -512,22 +552,24 @@ function App() {
 
   // Fonctions de gestion des actualités
   const addNews = () => {
-    if (newNews.trim()) {
-      const news = {
-        id: Date.now().toString(),
-        text: newNews.trim(),
-        newsType: newsType,
-        owner: socket.id
-      };
-      setNews(prev => [...prev, {
-        id: news.id,
-        text: news.text,
-        newsType: news.newsType,
-        owner: news.owner
-      }]);
-      setNewNews('');
-      socket.emit("add-news", news);
+    if (!newNews.trim()) {
+      errorToast("Veuillez entrer une actualité");
+      return;
     }
+    const news = {
+      id: Date.now().toString(),
+      text: newNews.trim(),
+      newsType: newsType,
+      owner: socket.id
+    };
+    setNews(prev => [...prev, {
+      id: news.id,
+      text: news.text,
+      newsType: news.newsType,
+      owner: news.owner
+    }]);
+    setNewNews('');
+    socket.emit("add-news", news);
   };
 
   function removeNews(id: string) {
@@ -556,6 +598,20 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="mx-auto">
+        {/* Toast Notifications */}
+        <ToastContainer
+          position="top-right"
+          autoClose={2000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme='light'
+          transition={Bounce}
+        />
         {/* Popup de la liste des utilisateurs */}
         <div className="absolute top-4 left-4">
           <button
@@ -742,7 +798,7 @@ function App() {
             <div className="flex flex-col">
               <div className="flex justify-around mb-4">
                 <button
-                  onClick={() => changeVote('pour')}
+                  onClick={canParticipate ? () => changeVote('pour') : () => errorToast("Vous devez entrer votre nom pour voter")}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
                   title={canParticipate ? "Voter pour" : AnonymeTitle}
@@ -751,7 +807,7 @@ function App() {
                   <span className="text-lg font-semibold">{users.filter(user => user.vote === 'pour').length}</span>
                 </button>
                 <button
-                  onClick={() => changeVote('contre')}
+                  onClick={canParticipate ? () => changeVote('contre') : () => errorToast("Vous devez entrer votre nom pour voter")}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
                   title={canParticipate ? "Voter contre" : AnonymeTitle}
