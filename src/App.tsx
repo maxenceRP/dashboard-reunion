@@ -10,7 +10,6 @@ import {
   Users,
   Vote,
   MessageCircleHeart,
-  Heart,
   CheckSquare,
   UserCircle,
   Plus,
@@ -305,7 +304,7 @@ function App() {
   // Fonctions de gestion des noms
   const changeUsername = (newUsername: string) => {
     newUsername = newUsername.trim();
-    if (users.find(user => user.name === newUsername || newUsername === "")) {
+    if (users.find(user => user.name === newUsername) && newUsername !== "") {
       return;
     }
     setUsers((prev) => prev.map((user) => {
@@ -384,6 +383,11 @@ function App() {
   function removeOdjPoint(id: string) {
     setOdjPoints(prev => prev.filter(point => point.id !== id));
     socket.emit("remove-odj", id);
+  }
+
+  function removeAllOdjPoints() {
+    setOdjPoints([]);
+    socket.emit("remove-all-odj");
   }
 
   const changeTitle = (ownerId: string) => {
@@ -528,6 +532,7 @@ function App() {
             <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg p-4 z-50">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-gray-800">Participants</h3>
+                <span className="text-sm text-gray-500 font-medium rounded-full bg-gray-100 px-2 py-1" title="Nombre de participants">{users.length}</span>
                 <button
                   onClick={() => setShowUserList(false)}
                   className="text-gray-500 hover:text-gray-700"
@@ -768,7 +773,15 @@ function App() {
             <div className="space-y-6">
               {/* ODJ */}
               <div className="p-3 bg-gray-50 rounded-lg">
-                <h3 className="font-medium text-gray-700 mb-4">Points à aborder</h3>
+                <div className="flex items-center justify-center mb-4 relative">
+                  <h3 className="font-medium text-gray-700 text-center flex-1">Points à aborder</h3>
+                  <button
+                    onClick={() => removeAllOdjPoints()}
+                    className="text-red-500 hover:text-red-700 absolute right-0 p-2"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
                 <div className="space-y-3">
                   {odjPoints.map(point => (
                     <div key={point.id} className="flex items-center justify-between gap-2">
@@ -945,7 +958,6 @@ function App() {
               <h2 className="text-xl font-semibold text-gray-800">Actualités</h2>
               <div className="flex items-center gap-2">
                 <Users className="text-indigo-600 w-6 h-6" />
-                <Heart className="text-indigo-600 w-6 h-6" />
               </div>
             </div>
             <div className="space-y-3">
@@ -958,6 +970,7 @@ function App() {
                       : 'bg-purple-100 text-purple-900'
                   } rounded-lg flex items-center justify-between`}
                 >
+                  
                   <p className="font-medium">
                     {item.text}
                   </p>
@@ -985,9 +998,10 @@ function App() {
                   value={newsType}
                   onChange={(e) => setNewsType(e.target.value as 'team' | 'hr')}
                   className="px-2 py-1 text-sm border rounded"
+                  style={{ backgroundColor: newsType === 'team' ? '#10B981' : 'purple', color: 'white' }}
                 >
-                  <option value="team">Equipe</option>
-                  <option value="hr">RH</option>
+                  <option value="team" style={{ backgroundColor: '#10B981', color: 'white' }} >Equipe</option>
+                  <option value="hr" style={{ backgroundColor: 'purple', color: 'white' }} >RH</option>
                 </select>
                 <button
                   onClick={addNews}
