@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import copy from 'copy-to-clipboard';
 import {
   Sun,
   Cloud,
@@ -19,6 +20,7 @@ import {
   ShieldAlert,
   Check,
   Import,
+  Download,
   UsersRound,
   EyeOff
 } from 'lucide-react';
@@ -442,6 +444,42 @@ function App() {
     addNewPoints(validPoints);
     setShowInput(false);
     setText("");
+  };
+
+  // Fonctions de gestion de l'export de l'ODJ et des décisions
+  const CopyToClipboard = (text: string) => {
+    try {
+      copy(text);
+      alert("Le texte a été copié dans le presse-papier");
+    } catch (err) {
+      alert("Impossible de copier le texte dans le presse-papier");
+      console.error(err);
+    }
+  }
+
+
+  const handleExport = () => {
+    // Exporte les points à aborder et les décisions prises dans un fichier texte et le télécharge
+    // Format du texte : 
+    // 📌 Ordre du Jour (ODJ) :
+    //🔹 MRP : ODJ test 1
+    //🔹 MRP : ODJ test 2
+    //
+    // ✅ Décisions :
+    // ✔️ MRP : Decision test 1
+    // ✔️ MRP : Decision test 2
+    const odjText = odjPoints.map(point => `🔹 ${point.trigram} : ${point.text}`).join("\n");
+    const decisionText = decisions.map(decision => `✔️ ${decision.trigram} : ${decision.text}`).join("\n");
+    const text = `📌 Ordre du Jour (ODJ) :\n${odjText}\n\n✅ Décisions :\n${decisionText}`;
+    // Copier dans le presse-papier
+    CopyToClipboard(text);
+    // Télécharger le fichier
+    // const element = document.createElement("a");
+    // const file = new Blob([text], { type: 'text/plain' });
+    // element.href = URL.createObjectURL(file);
+    // element.download = "Odj_Decisions.rtf";
+    // document.body.appendChild(element);
+    // element.click();
   };
 
 
@@ -893,28 +931,35 @@ function App() {
                 </div>
               </div>
               {/* Importer des points à aborder */}
-              <div className="flex items-center justify-center">
+              <div className="flex flex-col items-center gap-4">
                 {!showInput ? (
-                  <button
-                    onClick={handleButtonClick}
-                    className="bg-blue-500 text-white px-2 py-1 rounded-lg text-sm"
-                  >
-                    <div className="flex gap-1 items-center">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleButtonClick}
+                      className="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm flex items-center gap-1"
+                    >
                       <Import className="w-4 h-4" />
-                        Importer
-                    </div>
-                  </button>       
+                      Importer
+                    </button>  
+                    <button
+                      onClick={handleExport}
+                      className="bg-purple-500 text-white px-3 py-1 rounded-lg text-sm flex items-center gap-1"
+                    >
+                      <Download className="w-4 h-4" />
+                      Exporter
+                    </button>
+                  </div>     
                 ) : (
-                  <div className="mt-2 items-center">
+                  <div className="mt-2 flex flex-col items-center gap-3 w-full max-w-md">
                     <textarea
                       value={text}
                       onChange={(e) => setText(e.target.value)}
-                      className="border border-gray-300 rounded-md p-2 w-96 h-32"
+                      className="border border-gray-300 rounded-md p-2 w-full h-32"
                       placeholder="Saisir les points à aborder"
                     />
                     <button
                       onClick={handleSubmit}
-                      className="bg-green-500 text-white px-2 py-1 rounded-lg mt-2 text-sm"
+                      className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm w-full"
                     >
                       Soumettre
                     </button>

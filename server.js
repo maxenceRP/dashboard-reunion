@@ -72,7 +72,7 @@ var testingIps = ["10.251.198.13", "10.1.0.14"]
 
 io.on('connection', (socket) => {
   // Connexion d'un utilisateur
-  console.log('[CONNECT] User with id:', socket.id, '(IP:', socket.handshake.address, ') connected');
+  console.log('[CONNECT] User with id:', socket.id, '( IP:', socket.handshake.address, ') connected');
 
   // Vérification de la présence de l'utilisateur (même IP)
   if (users.find(user => user.ip === socket.handshake.address)) {
@@ -183,6 +183,11 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user-toggle-odj', coche);
   });
 
+  // Savegarde des news, décisions et ordre du jour
+  socket.on('save-all', () => {
+    saveAll();
+  });
+
   // Déconnexion d'un utilisateur
   socket.on('disconnect', () => {
     users.splice(users.findIndex(user => user.id === socket.id), 1);
@@ -190,14 +195,18 @@ io.on('connection', (socket) => {
     console.log('[DISCONNECT] User with id:', socket.id, 'disconnected');
     if (users.length === 0) {
       // Savegarde les news, décisions et ordre du jour
-      saveObjectToFile(newsList, path.join(saving_folder, 'news.json'));
-      saveObjectToFile(decisionList, path.join(saving_folder, 'decisions.json'));
-      saveObjectToFile(odjList, path.join(saving_folder, 'odj.json'));
-      saveObjectToFile(ticketMetrics, path.join(saving_folder, 'metrics.json'));
-      console.log('[SAVE] Saved news, decisions, odj and metrics');
+      saveAll();
     }
   });
 });
+
+function saveAll() {
+  saveObjectToFile(newsList, path.join(saving_folder, 'news.json'));
+  saveObjectToFile(decisionList, path.join(saving_folder, 'decisions.json'));
+  saveObjectToFile(odjList, path.join(saving_folder, 'odj.json'));
+  saveObjectToFile(ticketMetrics, path.join(saving_folder, 'metrics.json'));
+  console.log('[SAVE] Saved news, decisions, odj and metrics');
+}
 
 const IP = process.env.HOST;
 const PORT = Number(process.env.SOCKET_PORT) || 3000;
