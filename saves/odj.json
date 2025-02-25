@@ -1,1 +1,118 @@
-[]
+[
+    {
+        "id": "1740503795985",
+        "text": "test",
+        "trigram": "TES",
+        "completed": false,
+        "newsType": "",
+        "owner": "_uc8K6IgzsbZ4Mj3AAAD",
+        "notes": "Helllo test"
+    },
+    {
+        "id": "1740504325656",
+        "text": "Dashboard terminé.",
+        "trigram": "MRP",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC",
+        "notes": "z\"ddz ojoajzdjazd azdaz azdjazdajzdjazjdajzdj azdjaz djpazjd ajz djazpo dajzdpo ajzdpazd ajz dazd az daz dpazod azd azopd jazpjdazpodazjdazjd jpaz\nligne2"
+    },
+    {
+        "id": "1740504325657",
+        "text": "Afterwork: Beach Volley à sandfabric 19 mars 19h ",
+        "trigram": "MRP",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325658",
+        "text": "Poc Armis et opentext, recherche d'inventaire pour la CMDB et de vulnérabilités",
+        "trigram": "ERR",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325659",
+        "text": "V12 Bastion recette en cours de déploiement. Documentation bientôt terminée. Cible AM => v5",
+        "trigram": "NVO",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325660",
+        "text": "SI MIEL, PSP par projet et pas par application (PSP chapeau?), le psp c'est par application et pas par projet ",
+        "trigram": "ERR",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325661",
+        "text": "EDR cercle 2 Mobilité et medicis. Medicis avait un anti virus. Mobilité aussi. La question est de savoir si les antivirus vont cohabiter avec S1. Des tests sont en cours avec des exclusions de chaque côté, mais les entités n'ont pas la mains sur leurs consoles antivirus.",
+        "trigram": "SKA",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325662",
+        "text": "Incident collect",
+        "trigram": "SKA",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC",
+        "notes": "ggggggggggggggggggggggggggggggggggg  gggggggggggggggggggggggggggggggggggg\n\nhhhh\n\njjjjj"
+    },
+    {
+        "id": "1740504325663",
+        "text": "Socle a mis des compte de service dans le groupe de service domain admin via Easy vista (interdit normalement) ",
+        "trigram": "SKA",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325664",
+        "text": "Incident appliances de collecte pas d'explication sur la cause",
+        "trigram": "SKA",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325665",
+        "text": "Nouveau serveur de rebond avant juillet ",
+        "trigram": "AGI",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC",
+        "notes": "rgdrgr"
+    },
+    {
+        "id": "1740504325666",
+        "text": "Est-ce que NDD ipsecprev on va atteindre la limite des flux (problème licence)",
+        "trigram": "YDE",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325667",
+        "text": "POC SAS Varonis + Health check Varonis",
+        "trigram": "AGI",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    },
+    {
+        "id": "1740504325668",
+        "text": "Révision concernant les 5 licences O365 BYOD, chaque collaborateur dispose de 5 licences actuellement pour du matériel byod. Danger car on peut avoir des problème de fuite si les licences sont transmises à des externes",
+        "trigram": "PDU",
+        "completed": false,
+        "newsType": "",
+        "owner": "-VEqBoejvwd3HvjUAAAC"
+    }
+]

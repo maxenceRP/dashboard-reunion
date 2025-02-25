@@ -37,13 +37,14 @@ class User {
 
 // Classe représentant un item de liste
 class ListItem {
-  constructor(id, text, trigram, completed, newsType, owner) {
+  constructor(id, text, trigram, completed, newsType, owner, notes) {
     this.id = id;
     this.text = text;
     this.trigram = trigram;
     this.completed = completed;
     this.newsType = newsType;
     this.owner = owner;
+    this.notes = notes;
   }
 }
 
@@ -55,7 +56,7 @@ function saveObjectToFile(obj, filename = 'data.json') {
 // Fonction pour charger un objet depuis un fichier
 function loadObjectFromFile(filename) {
   if (!fs.existsSync(filename)) {
-      console.log("Fichier non trouvé !");
+      console.log(`[ERROR] File ${filename} does not exist`);
       return null;
   }
   const data = fs.readFileSync(filename, 'utf8');
@@ -105,7 +106,7 @@ io.on('connection', (socket) => {
   // Ajout d'un item à l'ordre du jour
   socket.on('add-odj', (odj) => {
     console.log('[ODJ] User with id:', socket.id, 'added odj with text:', odj.text);
-    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed, '', odj.owner));
+    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed, '', odj.owner, odj.notes));
     socket.broadcast.emit('user-add-odj', odj);
   });
 
@@ -189,6 +190,15 @@ io.on('connection', (socket) => {
     odj.completed = coche.completed;
     socket.broadcast.emit('user-toggle-odj', coche);
   });
+
+  // Mis à jour des notes d'un item de liste
+  socket.on('update-notes', (notes) => {
+    console.log('[NOTES] User with id:', socket.id, 'updated notes with id:', notes.id);
+    const odj = odjList.find(odj => odj.id === notes.id);
+    odj.notes = notes.notes;
+    socket.broadcast.emit('user-update-notes', notes);
+  });
+
 
   // Savegarde des news, décisions et ordre du jour
   socket.on('save-all', () => {

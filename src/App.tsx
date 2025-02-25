@@ -23,7 +23,9 @@ import {
   Import,
   Download,
   UsersRound,
-  EyeOff
+  EyeOff,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { io } from "socket.io-client";
 
@@ -44,6 +46,8 @@ interface ListItem {
   completed?: boolean;
   newsType?: string;
   owner?: string;
+  showNotes?: boolean;
+  notes?: string;
 }
 
 // interface de l'utilisateur
@@ -54,7 +58,7 @@ interface User {
   mood: string;
 }
 
-var IP = '10.251.198.66';
+var IP = '10.0.0.113';
 var PORT = '3000';
 const socket = io(`http://${IP}:${PORT}`);
 
@@ -62,6 +66,7 @@ const socket = io(`http://${IP}:${PORT}`);
 function App() {
   const [error, setError] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
+  const [isCR, setIsCR] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [showUserList, setShowUserList] = useState(false);
 
@@ -180,6 +185,15 @@ function App() {
       setOdjPoints(prev => prev.map(point => {
         if (point.id === odjPoint.id) {
           return { ...point, completed: odjPoint.completed };
+        }
+        return point;
+      }));
+    });
+
+    socket.on("user-update-notes", (notes) => {
+      setOdjPoints(prev => prev.map(point => {
+        if (point.id === notes.id) {
+          return { ...point, notes: notes.notes };
         }
         return point;
       }));
@@ -341,6 +355,7 @@ function App() {
     setIsAnonymous(checked);
     // reset vote and mood if user becomes anonymous
     if (checked) {
+      setIsCR(false);
       setUsers((prev) => prev.map((user) => {
         if (user.id === socket.id) {
           return { ...user, name: "", vote: "", mood: "" };
@@ -352,6 +367,10 @@ function App() {
       socket.emit("update-mood", "");
       infoToast("Vous êtes maintenant anonyme. Votre vote et votre humeur ont été réinitialisés");
     }
+  }
+
+  const becomeCR = (checked: boolean) => {
+    setIsCR(checked);
   }
 
 
@@ -484,6 +503,24 @@ function App() {
     setText("");
   };
 
+  // Fonctions de gestion des notes
+  const toggleNotes = (id: string) => {
+    setOdjPoints(points =>
+      points.map(point =>
+        point.id === id ? { ...point, showNotes: !point.showNotes } : point
+      )
+    );
+  };
+
+  const changeNotes = (id: string, notes: string) => {
+    setOdjPoints(points =>
+      points.map(point =>
+        point.id === id ? { ...point, notes: notes } : point
+      )
+    );
+    socket.emit("update-notes", {id: id, notes: notes});
+  };
+
   // Fonctions de gestion de l'export de l'ODJ et des décisions
   const CopyToClipboard = (text: string) => {
     try {
@@ -497,28 +534,29 @@ function App() {
 
 
   const handleExport = () => {
-    // Exporte les points à aborder et les décisions prises dans un fichier texte et le télécharge
+    // Exporte les points à aborder (et ses notes) et les décisions prises dans un fichier texte et le télécharge
     // Format du texte : 
     // 📌 Ordre du Jour (ODJ) :
+
     //🔹 MRP : ODJ test 1
+    //   ➡️ Notes test 1
     //🔹 MRP : ODJ test 2
+    //   ➡️ Notes test 2
+    //
     //
     // ✅ Décisions :
+
     // ✔️ MRP : Decision test 1
     // ✔️ MRP : Decision test 2
-    const odjText = odjPoints.map(point => `🔹 ${point.trigram} : ${point.text}`).join("\n");
+    const odjText = odjPoints.map(point => {
+      const notes = point.notes?.split("\n").filter(line => line.trim() !== "").map(note => `     ➡️ ${note}`).join("\n") || "";
+      return `🔹 ${point.trigram} : ${point.text}\n${notes}`
+    }).join("\n");
     const decisionText = decisions.map(decision => `✔️ ${decision.trigram} : ${decision.text}`).join("\n");
-    const text = `📌 Ordre du Jour (ODJ) :\n${odjText}\n\n✅ Décisions :\n${decisionText}`;
+    const text = `📌 Ordre du Jour (ODJ) :\n\n${odjText}\n\n\n✅ Décisions :\n\n${decisionText}`;
     // Copier dans le presse-papier
     CopyToClipboard(text);
     console.log(text);
-    // Télécharger le fichier
-    // const element = document.createElement("a");
-    // const file = new Blob([text], { type: 'text/plain' });
-    // element.href = URL.createObjectURL(file);
-    // element.download = "Odj_Decisions.rtf";
-    // document.body.appendChild(element);
-    // element.click();
   };
 
 
@@ -702,7 +740,22 @@ function App() {
                 placeholder="Votre nom"
                 className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
               />
+              
             )}
+            {users.find(user => user.id === socket.id)?.name && (
+              <div className="flex items-center gap-2">
+                <input
+                    type="checkbox"
+                    id="cr"
+                    checked={isCR}
+                    onChange={(e) => becomeCR(e.target.checked)}
+                    className="rounded text-indigo-600"
+                  />
+                <label htmlFor="cr" className="text-sm text-gray-600">
+                  Je fais le CR
+                </label>
+              </div>
+            )} 
           </div>
         </div>
 
@@ -878,36 +931,57 @@ function App() {
                 </div>
                 <div className="space-y-3">
                   {odjPoints.map(point => (
-                    <div key={point.id} className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1">
-                        <button
-                          onClick={() => toggleOdjPoint(point.id)}
-                          className={`w-5 h-5 rounded border flex items-center justify-center
-                            ${point.completed 
-                              ? 'bg-green-500 border-green-500 text-white' 
-                              : 'border-gray-300 text-transparent'}`}
-                        >
-                          {point.completed && <Check className="w-4 h-4" />}
-                        </button>
-                        <span
-                          className={`text-gray-600 flex-1 ${point.completed ? 'line-through' : ''}`}
-                          onMouseOverCapture={() => changeTitle(point.owner || "")}
-                          title={PointTitle}
-                        >
-                          {point.text}
-                        </span>
-                        {point.trigram && (
-                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                            {point.trigram}
+                    <div key={point.id} className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1">
+                          <button
+                            onClick={() => toggleOdjPoint(point.id)}
+                            className={`w-5 h-5 rounded border flex items-center justify-center
+                              ${point.completed 
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : 'border-gray-300 text-transparent'}`}
+                          >
+                            {point.completed && <Check className="w-4 h-4" />}
+                          </button>
+                          <span
+                            className={`text-gray-600 flex-1 ${point.completed ? 'line-through' : ''}`}
+                            onMouseOverCapture={() => changeTitle(point.owner || "")}
+                            title={PointTitle}
+                          >
+                            {point.text}
                           </span>
-                        )}
+                          {point.trigram && (
+                            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                              {point.trigram}
+                            </span>
+                          )}
+                          {isCR && (
+                            <button
+                              onClick={() => toggleNotes(point.id)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              {point.showNotes ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => removeOdjPoint(point.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => removeOdjPoint(point.id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      {isCR && point.showNotes && (
+                        <div className="bg-gray-100 p-2 rounded-lg">
+                          <textarea
+                            className="w-full border border-gray-300 rounded p-2"
+                            placeholder="Ajouter des notes..."
+                            onChange={(e) => changeNotes(point.id, e.target.value)}
+                            value={point.notes || ""}
+                          >
+                          </textarea>
+                        </div>
+                      )}
                     </div>
                   ))}
                   <div className="flex gap-2 mt-4">
