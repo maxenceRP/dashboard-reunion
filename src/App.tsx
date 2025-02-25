@@ -172,6 +172,10 @@ function App() {
       setOdjPoints(prev => prev.filter(point => point.id !== odjPointId));
     });
 
+    socket.on("user-remove-all-odj", () => {
+      setOdjPoints([]);
+    });
+
     socket.on("user-toggle-odj", (odjPoint) => {
       setOdjPoints(prev => prev.map(point => {
         if (point.id === odjPoint.id) {

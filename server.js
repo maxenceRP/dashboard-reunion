@@ -116,6 +116,13 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user-remove-odj', id);
   });
 
+  // Suppression de tous les items de l'ordre du jour
+  socket.on('remove-all-odj', () => {
+    console.log('[ODJ] User with id:', socket.id, 'removed all odj');
+    odjList = [];
+    io.emit('user-remove-all-odj');
+  });
+
   // Ajout d'une décision à prendre
   socket.on('add-decision', (decision) => {
     console.log('[DECISION] User with id:', socket.id, 'added decision with text:', decision.text);
