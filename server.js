@@ -193,10 +193,7 @@ io.on('connection', (socket) => {
     users.splice(users.findIndex(user => user.id === socket.id), 1);
     io.emit('user-disconnect', socket.id);
     console.log('[DISCONNECT] User with id:', socket.id, 'disconnected');
-    if (users.length === 0) {
-      // Savegarde les news, décisions et ordre du jour
-      saveAll();
-    }
+    saveAll();
   });
 });
 

@@ -507,6 +507,7 @@ function App() {
     const text = `📌 Ordre du Jour (ODJ) :\n${odjText}\n\n✅ Décisions :\n${decisionText}`;
     // Copier dans le presse-papier
     CopyToClipboard(text);
+    console.log(text);
     // Télécharger le fichier
     // const element = document.createElement("a");
     // const file = new Blob([text], { type: 'text/plain' });
@@ -713,6 +714,7 @@ function App() {
 
         {/* Section des Widgets */}
         <div className="grid grid-cols-4 gap-2">
+
           {/* Humeur du Jour with Percentages */}
           <div className="bg-white p-4 text-center rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-4">
@@ -721,36 +723,32 @@ function App() {
             </div>
             <div className="flex justify-around mb-4">
               <button
-                onClick={() => changeMood('bonne')}
+                onClick={canParticipate ? () => changeMood('bonne') : () => errorToast("Vous devez entrer votre nom pour voter")}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
                   users.find(user => user.id === socket.id)?.mood === 'bonne' ? 'bg-green-100 text-green-600' : 'text-gray-400'
                 }`}
-                disabled={!canParticipate}
                 title={canParticipate ? "Bonne humeur" : AnonymeTitle}
               >
                 <Sun className="w-8 h-8" />
               </button>
               <button
-                onClick={() => {
-                  changeMood('neutre');
-                }}
+                onClick={canParticipate ? () => changeMood('neutre') : () => errorToast("Vous devez entrer votre nom pour voter")}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
                   users.find(user => user.id === socket.id)?.mood === 'neutre' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-400'
                 }`}
-                disabled={!canParticipate}
                 title={canParticipate ? "Humeur neutre" : AnonymeTitle}
               >
                 <Cloud className="w-8 h-8" />
               </button>
               <button
-                onClick={() => changeMood('mauvaise')}
+                onClick={canParticipate ? () => changeMood('mauvaise') : () => errorToast("Vous devez entrer votre nom pour voter")}
                 className={`p-3 rounded-full ${
                   !canParticipate ? 'opacity-50 cursor-not-allowed' :
                   users.find(user => user.id === socket.id)?.mood === 'mauvaise' ? 'bg-blue-100 text-blue-600' : 'text-gray-400'
                 }`}
-                disabled={!canParticipate} title={canParticipate ? "Mauvaise humeur" : AnonymeTitle}
+                title={canParticipate ? "Mauvaise humeur" : AnonymeTitle}
               >
                 <CloudRain className="w-8 h-8" />
               </button>
@@ -800,7 +798,6 @@ function App() {
                 <button
                   onClick={canParticipate ? () => changeVote('pour') : () => errorToast("Vous devez entrer votre nom pour voter")}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
                   title={canParticipate ? "Voter pour" : AnonymeTitle}
                 >
                   <ThumbsUp className="w-8 h-8 text-green-500 mb-2" />
@@ -809,7 +806,6 @@ function App() {
                 <button
                   onClick={canParticipate ? () => changeVote('contre') : () => errorToast("Vous devez entrer votre nom pour voter")}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canParticipate || users.find(user => user.id === socket.id)?.vote != ''}
                   title={canParticipate ? "Voter contre" : AnonymeTitle}
                 >
                   <ThumbsDown className="w-8 h-8 text-red-500 mb-2" />
