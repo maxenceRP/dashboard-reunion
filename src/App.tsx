@@ -549,7 +549,7 @@ function App() {
     // ✔️ MRP : Decision test 1
     // ✔️ MRP : Decision test 2
     const odjText = odjPoints.map(point => {
-      const notes = point.notes?.split("\n").filter(line => line.trim() !== "").map(note => `     ➡️ ${note}`).join("\n") || "";
+      const notes = point.notes?.split("\n").filter(line => line.trim() !== "").map(note => `     ➡️ ${note}`).join("\n") || '     ➡️';
       return `🔹 ${point.trigram} : ${point.text}\n${notes}`
     }).join("\n");
     const decisionText = decisions.map(decision => `✔️ ${decision.trigram} : ${decision.text}`).join("\n");
@@ -813,7 +813,10 @@ function App() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Sun className="w-4 h-4 text-green-500" />
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div 
+                  className="flex-1 bg-gray-200 rounded-full h-2"
+                  title={users.filter(user => user.mood === 'bonne').map(user => user.name).join(", ")}
+                >
                   <div
                     className="bg-green-500 rounded-full h-2"
                     style={{ width: `${moodPercentages.bonne}%` }}
@@ -823,7 +826,10 @@ function App() {
               </div>
               <div className="flex items-center gap-2">
                 <Cloud className="w-4 h-4 text-yellow-500" />
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div
+                  className="flex-1 bg-gray-200 rounded-full h-2"
+                  title={users.filter(user => user.mood === 'neutre').map(user => user.name).join(", ")}
+                >
                   <div
                     className="bg-yellow-500 rounded-full h-2"
                     style={{ width: `${moodPercentages.neutre}%` }}
@@ -833,7 +839,10 @@ function App() {
               </div>
               <div className="flex items-center gap-2">
                 <CloudRain className="w-4 h-4 text-blue-500" />
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div 
+                  className="flex-1 bg-gray-200 rounded-full h-2"
+                  title={users.filter(user => user.mood === 'mauvaise').map(user => user.name).join(", ")}
+                >
                   <div
                     className="bg-blue-500 rounded-full h-2"
                     style={{ width: `${moodPercentages.mauvaise}%` }}
