@@ -341,6 +341,10 @@ function App() {
       errorToast("Ce nom est déjà utilisé par un autre participant");
       return;
     }
+    if (newUsername.length > 20) {
+      errorToast("Votre nom ne doit pas dépasser 20 caractères");
+      return;
+    }
     setUsers((prev) => prev.map((user) => {
       if (user.id === socket.id) {
         return { ...user, name: newUsername };
