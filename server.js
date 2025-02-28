@@ -160,6 +160,8 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user-add-vote', { id: socket.id, vote: vote });
   });
 
+  
+
   // Suppression d'un vote
   socket.on('remove-vote', () => {
     console.log('[VOTE] User with id:', socket.id, 'removed vote');

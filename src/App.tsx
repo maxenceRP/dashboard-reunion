@@ -42,7 +42,7 @@ interface TicketMetrics {
 interface ListItem {
   id: string;
   text: string;
-  trigram?: string;
+  trigrams?: string[];
   completed?: boolean;
   newsType?: string;
   owner?: string;
@@ -98,9 +98,9 @@ function App() {
   const [news, setNews] = useState<ListItem[]>([]);
 
   const [newOdjPoint, setNewOdjPoint] = useState('');
-  const [newOdjTrigram, setNewOdjTrigram] = useState('');
+  const [newOdjTrigrams, setNewOdjTrigrams] = useState('');
   const [newDecision, setNewDecision] = useState('');
-  const [newDecisionTrigram, setNewDecisionTrigram] = useState('');
+  const [newDecisionTrigrams, setNewDecisionTrigrams] = useState('');
   const [newNews, setNewNews] = useState('');
   const [newsType, setNewsType] = useState<'team' | 'hr'>('team');
   const [PointTitle, setTitle] = useState('');
@@ -167,7 +167,7 @@ function App() {
       setOdjPoints(prev => [...prev, {
         id: odjPoint.id,
         text: odjPoint.text,
-        trigram: odjPoint.trigram,
+        trigrams: odjPoint.trigram,
         completed: odjPoint.completed,
         owner: odjPoint.owner
       }]);
@@ -203,7 +203,7 @@ function App() {
       setDecisions(prev => [...prev, {
         id: decision.id,
         text: decision.text,
-        trigram: decision.trigram,
+        trigrams: decision.trigram,
         owner: decision.owner
       }]);
     });
@@ -410,26 +410,26 @@ function App() {
       errorToast("Veuillez entrer un point à aborder");
       return;
     }
-    if (!newOdjTrigram.trim()) {
-      errorToast("Veuillez entrer un trigramme");
+    if (!newOdjTrigrams.trim()) {
+      errorToast("Veuillez entrer un ou des trigrammes");
       return;
     }
     const odjPoint = {
       id: Date.now().toString(),
       text: newOdjPoint.trim(),
-      trigram: newOdjTrigram.trim().toUpperCase(),
+      trigrams: newOdjTrigrams.trim().toUpperCase().split(/[\s/,]+/),
       completed: false,
       owner: socket.id
     };
     setOdjPoints(prev => [...prev, {
       id: odjPoint.id,
       text: odjPoint.text,
-      trigram: odjPoint.trigram,
+      trigrams: odjPoint.trigrams,
       completed: odjPoint.completed,
       owner: odjPoint.owner
     }]);
     setNewOdjPoint('');
-    setNewOdjTrigram('');
+    setNewOdjTrigrams('');
     socket.emit("add-odj", odjPoint);
   };
 
@@ -462,9 +462,11 @@ function App() {
     const points = text.split("\n");
     const filteredPoints = points.filter(point => point.trim() !== "");
     const parsedPoints = filteredPoints.map(point => {
-      const match = point.match(/([A-Z]{3})\s*:\s*(.*)/);
+      // Match trigram and text: Example: MRP/PSP NGE : Point text. 
+      const match = point.match(/([A-Z0-9\/ ]+):(.+)/);
       if (match) {
-        return { trigram: match[1], text: match[2] };
+        console
+        return { trigrams : match[1].trim().toUpperCase().split(/[\s/,]+/), text: match[2].trim() };
       }
       return null;
     });
@@ -473,20 +475,20 @@ function App() {
     return validPoints;
   }
 
-  function addNewPoints(points: { trigram: string; text: string }[]) {
+  function addNewPoints(points: { trigrams: string[], text: string }[]) {
     var id = Date.now();
     points.forEach(point => {
       const odjPoint = {
         id: (id++).toString(),
         text: point.text,
-        trigram: point.trigram,
+        trigrams: point.trigrams,
         completed: false,
         owner: socket.id
       };
       setOdjPoints(prev => [...prev, {
         id: odjPoint.id,
         text: odjPoint.text,
-        trigram: odjPoint.trigram,
+        trigrams: odjPoint.trigrams,
         completed: odjPoint.completed,
         owner: odjPoint.owner
       }]);
@@ -554,9 +556,9 @@ function App() {
     // ✔️ MRP : Decision test 2
     const odjText = odjPoints.map(point => {
       const notes = point.notes?.split("\n").filter(line => line.trim() !== "").map(note => `     ➡️ ${note}`).join("\n") || '     ➡️';
-      return `🔹 ${point.trigram} : ${point.text}\n${notes}`
+      return `🔹 ${point.trigrams?.join(" / ")} : ${point.text}\n${notes}`
     }).join("\n");
-    const decisionText = decisions.map(decision => `✔️ ${decision.trigram} : ${decision.text}`).join("\n");
+    const decisionText = decisions.map(decision => `✔️ ${decision.trigrams?.join(" / ")} : ${decision.text}`).join("\n");
     const text = `📌 Ordre du Jour (ODJ) :\n\n${odjText}\n\n\n✅ Décisions :\n\n${decisionText}`;
     // Copier dans le presse-papier
     CopyToClipboard(text);
@@ -570,24 +572,24 @@ function App() {
       errorToast("Veuillez entrer une décision");
       return;
     }
-    if (!newDecisionTrigram.trim()) {
+    if (!newDecisionTrigrams.trim()) {
       errorToast("Veuillez entrer un trigramme");
       return;
     }
     const decision = {
       id: Date.now().toString(),
       text: newDecision.trim(),
-      trigram: newDecisionTrigram.trim().toUpperCase(),
+      trigrams: newDecisionTrigrams.trim().toUpperCase().split(/[\s/,]+/),
       owner: socket.id
     };
     setDecisions(prev => [...prev, {
       id: decision.id,
       text: decision.text,
-      trigram: decision.trigram,
+      trigrams: decision.trigrams,
       owner: decision.owner
     }]);
     setNewDecision('');
-    setNewDecisionTrigram('');
+    setNewDecisionTrigrams('');
     socket.emit("add-decision", decision);
   };
 
@@ -963,11 +965,11 @@ function App() {
                           >
                             {point.text}
                           </span>
-                          {point.trigram && (
-                            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                              {point.trigram}
+                          {point.trigrams?.map(trigram => (
+                            <span key={trigram} className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                              {trigram}
                             </span>
-                          )}
+                          ))}
                           {isCR && (
                             <button
                               onClick={() => toggleNotes(point.id)}
@@ -1007,11 +1009,10 @@ function App() {
                     />
                     <input
                       type="text"
-                      value={newOdjTrigram}
-                      onChange={(e) => setNewOdjTrigram(e.target.value)}
+                      value={newOdjTrigrams}
+                      onChange={(e) => setNewOdjTrigrams(e.target.value)}
                       placeholder="NGE"
                       className="w-16 px-2 py-1 text-sm border rounded text-center uppercase"
-                      maxLength={3}
                     />
                     <button
                       onClick={addOdjPoint}
@@ -1034,11 +1035,11 @@ function App() {
                           onMouseOverCapture={() => changeTitle(decision.owner || "")}
                           title={PointTitle}
                         >{decision.text}</span>
-                        {decision.trigram && (
-                          <span className="px-2 py-1 text-xs font-medium bg-green-200 text-green-800 rounded">
-                            {decision.trigram}
+                        {decision.trigrams?.map(trigram => (
+                          <span key={trigram} className="px-2 py-1 text-xs font-medium bg-green-200 text-green-800 rounded">
+                            {trigram}
                           </span>
-                        )}
+                        ))}
                       </div>
                       <button
                         onClick={() => removeDecision(decision.id)}
@@ -1058,11 +1059,10 @@ function App() {
                     />
                     <input
                       type="text"
-                      value={newDecisionTrigram}
-                      onChange={(e) => setNewDecisionTrigram(e.target.value)}
-                      placeholder="MRP"
+                      value={newDecisionTrigrams}
+                      onChange={(e) => setNewDecisionTrigrams(e.target.value)}
+                      placeholder="MRP/PSP"
                       className="w-16 px-2 py-1 text-sm border rounded text-center uppercase"
-                      maxLength={3}
                     />
                     <button
                       onClick={addDecision}
