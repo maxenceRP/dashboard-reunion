@@ -670,7 +670,7 @@ function App() {
           
           {/* User List Popup */}
           {showUserList && (
-            <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg p-4 z-50">
+            <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-lg shadow-lg p-4 z-50">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-gray-800">Participants</h3>
                 <span className="text-sm text-gray-500 font-medium rounded-full bg-gray-100 px-2 py-1" title="Nombre de participants">{users.length}</span>

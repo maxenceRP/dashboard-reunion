@@ -1,14 +1,5 @@
 [
     {
-        "id": "1740503795985",
-        "text": "test",
-        "trigram": "TES",
-        "completed": false,
-        "newsType": "",
-        "owner": "_uc8K6IgzsbZ4Mj3AAAD",
-        "notes": "Helllo test"
-    },
-    {
         "id": "1740504325656",
         "text": "Dashboard terminé.",
         "trigram": "MRP",
@@ -23,7 +14,8 @@
         "trigram": "MRP",
         "completed": false,
         "newsType": "",
-        "owner": "-VEqBoejvwd3HvjUAAAC"
+        "owner": "-VEqBoejvwd3HvjUAAAC",
+        "notes": "fefe"
     },
     {
         "id": "1740504325658",
