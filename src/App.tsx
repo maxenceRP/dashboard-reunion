@@ -465,7 +465,6 @@ function App() {
       // Match trigram and text: Example: MRP/PSP NGE : Point text. 
       const match = point.match(/([A-Z0-9\/ ]+):(.+)/);
       if (match) {
-        console
         return { trigrams : match[1].trim().toUpperCase().split(/[\s/,]+/), text: match[2].trim() };
       }
       return null;
@@ -776,7 +775,7 @@ function App() {
         </h1>
 
         {/* Section des Widgets */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
           {/* Humeur du Jour with Percentages */}
           <div className="bg-white p-4 text-center rounded-xl shadow-lg">
@@ -784,7 +783,7 @@ function App() {
               <h2 className="text-xl font-semibold text-gray-800">Humeur du Jour</h2>
               <MessageCircleHeart className="text-indigo-600 w-6 h-6" />
             </div>
-            <div className="flex justify-around mb-4">
+            <div className="flex flex-wrap justify-around mb-4">
               <button
                 onClick={canParticipate ? () => changeMood('bonne') : () => errorToast("Vous devez entrer votre nom pour voter")}
                 className={`p-3 rounded-full ${
@@ -866,7 +865,7 @@ function App() {
               <Vote className="text-indigo-600 w-6 h-6" />
             </div>
             <div className="flex flex-col">
-              <div className="flex justify-around mb-4">
+              <div className="flex flex-wrap justify-around mb-4">
                 <button
                   onClick={canParticipate ? () => changeVote('pour') : () => errorToast("Vous devez entrer votre nom pour voter")}
                   className={`flex flex-col items-center transition-opacity ${!canParticipate || users.find(user => user.id === socket.id)?.vote ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -999,7 +998,7 @@ function App() {
                       )}
                     </div>
                   ))}
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-4">
                     <input
                       type="text"
                       value={newOdjPoint}
@@ -1012,7 +1011,7 @@ function App() {
                       value={newOdjTrigrams}
                       onChange={(e) => setNewOdjTrigrams(e.target.value)}
                       placeholder="NGE"
-                      className="w-16 px-2 py-1 text-sm border rounded text-center uppercase"
+                      className="w-24 px-2 py-1 text-sm border rounded text-center uppercase"
                     />
                     <button
                       onClick={addOdjPoint}
@@ -1049,7 +1048,7 @@ function App() {
                       </button>
                     </div>
                   ))}
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-4">
                     <input
                       type="text"
                       value={newDecision}
@@ -1061,8 +1060,8 @@ function App() {
                       type="text"
                       value={newDecisionTrigrams}
                       onChange={(e) => setNewDecisionTrigrams(e.target.value)}
-                      placeholder="MRP/PSP"
-                      className="w-16 px-2 py-1 text-sm border rounded text-center uppercase"
+                      placeholder="MRP / PSP"
+                      className="w-24 px-2 py-1 text-sm border rounded text-center uppercase"
                     />
                     <button
                       onClick={addDecision}
@@ -1158,8 +1157,7 @@ function App() {
                       : 'bg-purple-100 text-purple-900'
                   } rounded-lg flex items-center justify-between`}
                 >
-                  
-                  <p className="font-medium">
+                  <p className="font-medium max-w-full break-words">
                     {item.text}
                   </p>
                   <button
@@ -1168,13 +1166,13 @@ function App() {
                       item.newsType === 'team' 
                         ? 'text-emerald-700 hover:text-emerald-900' 
                         : 'text-purple-700 hover:text-purple-900'
-                    } ml-2`}
+                    } ml-2 shrink-0`}
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
-              <div className="container flex align-items-center gap-2 mt-4">
+              <div className="container flex flex-wrap items-center gap-2 mt-4">
                 <input
                   type="text"
                   value={newNews}
