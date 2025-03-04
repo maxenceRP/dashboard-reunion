@@ -990,14 +990,23 @@ function App() {
                         </div>
                       </div>
                       {isCR && point.showNotes && (
-                        <div className="bg-gray-100 p-2 rounded-lg">
-                          <textarea
+                        <textarea
                             className="w-full border border-gray-300 rounded p-2"
                             placeholder="Ajouter des notes..."
                             onChange={(e) => changeNotes(point.id, e.target.value)}
                             value={point.notes || ""}
                           >
-                          </textarea>
+                        </textarea>
+                      )}
+                      {/* Si showNotes ==  false, on affiche les notes actuelles en dessous en petit */}
+                      {isCR && !point.showNotes && point.notes?.trim() && (
+                        <div
+                          className="bg-gray-100 p-2 rounded-lg"
+                          onClick={() => toggleNotes(point.id)}
+                        >
+                          <span className="text-xs text-gray-500">
+                            {point.notes}
+                          </span>
                         </div>
                       )}
                     </div>
