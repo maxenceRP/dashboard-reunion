@@ -338,6 +338,9 @@ function App() {
   // Fonctions de gestion des noms
   const changeUsername = (newUsername: string) => {
     newUsername = newUsername.trim();
+    if (newUsername === "") {
+      setIsCR(false);
+    }
     if (users.find(user => user.name === newUsername) && newUsername !== "") {
       errorToast("Ce nom est déjà utilisé par un autre participant");
       return;
