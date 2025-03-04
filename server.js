@@ -37,10 +37,10 @@ class User {
 
 // Classe représentant un item de liste
 class ListItem {
-  constructor(id, text, trigram, completed, newsType, owner, notes) {
+  constructor(id, text, trigrams, completed, newsType, owner, notes) {
     this.id = id;
     this.text = text;
-    this.trigram = trigram;
+    this.trigrams = trigrams;
     this.completed = completed;
     this.newsType = newsType;
     this.owner = owner;
@@ -106,7 +106,7 @@ io.on('connection', (socket) => {
   // Ajout d'un item à l'ordre du jour
   socket.on('add-odj', (odj) => {
     console.log('[ODJ] User with id:', socket.id, 'added odj with text:', odj.text);
-    odjList.push(new ListItem(odj.id, odj.text, odj.trigram, odj.completed, '', odj.owner, odj.notes));
+    odjList.push(new ListItem(odj.id, odj.text, odj.trigrams, odj.completed, '', odj.owner, odj.notes));
     socket.broadcast.emit('user-add-odj', odj);
   });
 
@@ -127,7 +127,7 @@ io.on('connection', (socket) => {
   // Ajout d'une décision à prendre
   socket.on('add-decision', (decision) => {
     console.log('[DECISION] User with id:', socket.id, 'added decision with text:', decision.text);
-    decisionList.push(new ListItem(decision.id, decision.text, decision.trigram, decision.owner));
+    decisionList.push(new ListItem(decision.id, decision.text, decision.trigrams, decision.owner));
     socket.broadcast.emit('user-add-decision', decision);
   });
 

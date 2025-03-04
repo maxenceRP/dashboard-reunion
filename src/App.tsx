@@ -120,6 +120,7 @@ function App() {
     });
 
     socket.on("odj-list", (odjPoints) => {
+      console.log(odjPoints);
       setOdjPoints(odjPoints);
     });
 
@@ -167,7 +168,7 @@ function App() {
       setOdjPoints(prev => [...prev, {
         id: odjPoint.id,
         text: odjPoint.text,
-        trigrams: odjPoint.trigram,
+        trigrams: odjPoint.trigrams,
         completed: odjPoint.completed,
         owner: odjPoint.owner
       }]);
@@ -203,7 +204,7 @@ function App() {
       setDecisions(prev => [...prev, {
         id: decision.id,
         text: decision.text,
-        trigrams: decision.trigram,
+        trigrams: decision.trigrams,
         owner: decision.owner
       }]);
     });
