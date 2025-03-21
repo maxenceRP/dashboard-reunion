@@ -25,7 +25,9 @@ import {
   UsersRound,
   EyeOff,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Shrink,
+  Expand
 } from 'lucide-react';
 import { io } from "socket.io-client";
 
@@ -56,6 +58,7 @@ interface User {
   name: string;
   vote: string;
   mood: string;
+  cr: boolean;
 }
 
 var IP = '10.0.0.113';
@@ -69,6 +72,7 @@ function App() {
   const [isCR, setIsCR] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [showUserList, setShowUserList] = useState(false);
+  const [showUserProfil, setShowUserProfil] = useState(false);
 
   const [ticketMetrics, setTicketMetrics] = useState<TicketMetrics[]>([
     {
@@ -140,7 +144,7 @@ function App() {
     
     // Evenements de mise à jour en temps réel
     socket.on("user-connect", (userId) => {
-      setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "" }]);
+      setUsers((prev) => [...prev, { id: userId, name: "", vote: "", mood: "", cr: false }]);
     });
 
     socket.on('user-already-connected', (message: string) => {
@@ -252,6 +256,16 @@ function App() {
       }));
     });
 
+    socket.on("user-update-cr", (cr) => {
+      setUsers((prev) => prev.map((user) => {
+        if (user.id === cr.id) {
+          return { ...user, cr: cr.value };
+        }
+        return user;
+      }
+      ));
+    });
+
     socket.on("user-update-ticket-metric", (metric) => {
       setTicketMetrics(prev => prev.map((m, index) => {
         if (index === metric.index) {
@@ -361,8 +375,10 @@ function App() {
 
   const becomeAnonymous = (checked: boolean) => {
     setIsAnonymous(checked);
+    setShowUserProfil(!checked);
     // reset vote and mood if user becomes anonymous
     if (checked) {
+      
       setIsCR(false);
       setUsers((prev) => prev.map((user) => {
         if (user.id === socket.id) {
@@ -379,6 +395,13 @@ function App() {
 
   const becomeCR = (checked: boolean) => {
     setIsCR(checked);
+    setUsers((prev) => prev.map((user) => {
+      if (user.id === socket.id) {
+        return { ...user, cr: checked };
+      }
+      return user;
+    }));
+    socket.emit("update-cr", checked);
   }
 
 
@@ -711,6 +734,11 @@ function App() {
                         Humeur
                       </span>
                     )}
+                    {user.cr && (
+                      <span className="ml-auto text-xs px-2 py-1 bg-yellow-100 text-red-800 rounded">
+                        CR
+                      </span>
+                    )}
                   </div>
                 ))}
                 {users.length === 0 && (
@@ -738,27 +766,43 @@ function App() {
               <label htmlFor="anonymous" className="text-sm text-gray-600">
                 Rester anonyme
               </label>
+              {!showUserProfil &&
+                <button
+                  onClick={() => setShowUserProfil(true)}
+                  className="ml-auto text-light-grey-600"
+                  title='Afficher le profil utilisateur'
+                >
+                  <Expand className="w-4 h-4" />
+                </button>
+              }
+              {showUserProfil &&
+                <button
+                  onClick={() => setShowUserProfil(false)}
+                  className="ml-auto text-light-grey-600" 
+                  title='Masquer le profil utilisateur'
+                >
+                  <Shrink className="w-4 h-4" />
+                </button>
+              }
             </div>
-            {!isAnonymous && (
+            {showUserProfil && (
               <input
                 type="text"
                 value={users.find(user => user.id === socket.id)?.name}
-                onChange={(e) => {
-                  changeUsername(e.target.value);
-                }}
+                onChange={(e) => changeUsername(e.target.value)}
                 placeholder="Votre nom"
                 className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
               />
               
             )}
-            {users.find(user => user.id === socket.id)?.name && (
+            {showUserProfil && users.find(user => user.id === socket.id)?.name && (
               <div className="flex items-center gap-2">
                 <input
                     type="checkbox"
                     id="cr"
                     checked={isCR}
                     onChange={(e) => becomeCR(e.target.checked)}
-                    className="rounded text-indigo-600"
+                    className="rounded text-red-600"
                   />
                 <label htmlFor="cr" className="text-sm text-gray-600">
                   Je fais le CR
@@ -943,6 +987,7 @@ function App() {
                   <button
                     onClick={() => removeAllOdjPoints()}
                     className="text-red-500 hover:text-red-700 absolute right-0 p-2"
+                    title='Supprimer tous les points'
                   >
                     <X className="w-6 h-6" />
                   </button>

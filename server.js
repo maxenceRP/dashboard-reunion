@@ -26,11 +26,12 @@ app.use(express.static(join(__dirname, 'dist')));
 
 // Classe représentant un utilisateur
 class User {
-    constructor(id, name, vote, mood, ip) {
+    constructor(id, name, vote, mood, cr, ip) {
         this.id = id;
         this.name = name;
         this.vote = vote;
         this.mood = mood;
+        this.cr = cr;
         this.ip = ip;
     }
 }
@@ -92,7 +93,7 @@ io.on('connection', (socket) => {
   socket.emit('decision-list', decisionList);
   socket.emit('news-list', newsList);
   socket.emit('ticket-metrics', ticketMetrics);
-  users.push(new User(socket.id, '', '', '', socket.handshake.address));
+  users.push(new User(socket.id, '', '', '', false, socket.handshake.address));
   io.emit('user-connect', socket.id);
 
   // Mise à jour du nom de l'utilisateur
@@ -176,6 +177,14 @@ io.on('connection', (socket) => {
     const user = users.find(user => user.id === socket.id);
     user.mood = mood;
     socket.broadcast.emit('user-update-mood', { id: socket.id, value: mood });
+  });
+
+  // Mise à jour de la CR de l'utilisateur
+  socket.on('update-cr', (cr) => {
+    console.log('[CR] User with id:', socket.id, 'is editing the CR');
+    const user = users.find(user => user.id === socket.id);
+    user.cr = cr;
+    socket.broadcast.emit('user-update-cr', { id: socket.id, value: cr });
   });
 
   // Mise à jour d'une métrique de ticket
