@@ -111,6 +111,7 @@ function App() {
 
   const [showInput, setShowInput] = useState(false);
   const [text, setText] = useState("");
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   // Toast Notifications
   const successToast = (message: string) => toast.success(message, { transition: Flip, position: 'bottom-center' });
@@ -468,6 +469,7 @@ function App() {
   function removeAllOdjPoints() {
     setOdjPoints([]);
     socket.emit("remove-all-odj");
+    setShowDeleteConfirmation(false);
   }
 
   const changeTitle = (ownerId: string) => {
@@ -985,13 +987,41 @@ function App() {
                 <div className="flex items-center justify-center mb-4 relative">
                   <h3 className="font-medium text-gray-700 text-center flex-1">Points à aborder</h3>
                   <button
-                    onClick={() => removeAllOdjPoints()}
+                    onClick={() => setShowDeleteConfirmation(true)}
                     className="text-red-500 hover:text-red-700 absolute right-0 p-2"
                     title='Supprimer tous les points'
                   >
                     <X className="w-6 h-6" />
                   </button>
                 </div>
+                {/* Delete Confirmation Modal */}
+                {showDeleteConfirmation && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Confirmer la suppression
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        Êtes-vous sûr de vouloir supprimer tous les points à l'ordre du jour ?<br />
+                        Cette action est irréversible.
+                      </p>
+                      <div className="flex justify-end gap-4">
+                        <button
+                          onClick={() => setShowDeleteConfirmation(false)}
+                          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          onClick={removeAllOdjPoints}
+                          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-3">
                   {odjPoints.map(point => (
                     <div key={point.id} className="space-y-2">
@@ -1029,6 +1059,7 @@ function App() {
                           <button
                             onClick={() => removeOdjPoint(point.id)}
                             className="text-red-500 hover:text-red-700"
+                            title='Supprimer le point'
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -1074,6 +1105,7 @@ function App() {
                     <button
                       onClick={addOdjPoint}
                       className="text-green-500 hover:text-green-700"
+                      title='Ajouter un point'
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -1101,6 +1133,7 @@ function App() {
                       <button
                         onClick={() => removeDecision(decision.id)}
                         className="text-red-500 hover:text-red-700"
+                        title='Supprimer la décision'
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -1124,6 +1157,7 @@ function App() {
                     <button
                       onClick={addDecision}
                       className="text-green-500 hover:text-green-700"
+                      title='Ajouter une décision'
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -1250,6 +1284,7 @@ function App() {
                 <button
                   onClick={addNews}
                   className="text-green-500 hover:text-green-700"
+                  title='Ajouter une actualité'
                 >
                   <Plus className="w-4 h-4" />
                 </button>
